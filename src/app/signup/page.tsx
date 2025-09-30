@@ -1,11 +1,13 @@
 "use client"
 
+
 import Link from "next/link"
 import Image from "next/image"
 import { useState, useEffect } from "react"
 import { authHelpers } from "@/lib/supabase"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
+import { FiArrowLeft } from "react-icons/fi"
 
 export default function SignupPage() {
      const [isLoading, setIsLoading] = useState(false)
@@ -27,9 +29,9 @@ export default function SignupPage() {
           try {
                setIsLoading(true)
                setError("")
-               
+
                const { error } = await authHelpers.signInWithOAuth('google')
-               
+
                if (error) {
                     console.error('Error signing up with Google:', error.message)
                     setError(error.message)
@@ -48,13 +50,13 @@ export default function SignupPage() {
           try {
                setIsEmailLoading(true)
                setError("")
-               
+
                const { data, error } = await authHelpers.signUpWithEmail(
-                    formData.email, 
-                    formData.password, 
+                    formData.email,
+                    formData.password,
                     formData.fullName
                )
-               
+
                if (error) {
                     console.error('Error signing up:', error.message)
                     setError(error.message)
@@ -103,7 +105,16 @@ export default function SignupPage() {
      }
 
      return (
-          <div className="min-h-screen bg-gray-50 flex">
+          <div className="relative min-h-screen bg-gray-50 flex">
+               {/* Nút quay về góc trái */}
+               <button
+                    type="button"
+                    onClick={() => router.push('/')}
+                    className="absolute top-4 left-4 flex items-center gap-2 bg-white/80 text-gray-700 py-2 px-4 rounded-lg shadow hover:bg-blue-100 hover:text-blue-700 transition-colors font-medium z-10"
+               >
+                    <FiArrowLeft size={20} />
+                    Back
+               </button>
                {/* Left Side - Hero Section */}
                <div className="hidden lg:flex lg:w-1/2 bg-white items-center justify-center p-12">
                     <div className="max-w-md">
