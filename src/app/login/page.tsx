@@ -109,7 +109,7 @@ export default function LoginPage() {
                <button
                     type="button"
                     onClick={() => router.push('/')}
-                    className="absolute top-4 left-4 bg-gray-200 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-300 transition-colors font-medium z-10"
+                    className="absolute top-4 left-4 flex items-center gap-2 bg-white/80 text-gray-700 py-2 px-4 rounded-lg shadow hover:bg-blue-100 hover:text-blue-700 transition-colors font-medium z-10"
                >
                     <FiArrowLeft size={20} />
                     Back
