@@ -2,6 +2,7 @@
 
 import Link from "next/link"
 import { useState } from "react"
+import Navbar from "@/components/Navbar"
 
 // Empty functions for implementation
 function handleSearch(searchData : any) {
@@ -42,7 +43,9 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Hero Section with Navigation */}
+      <Navbar />
+      
+      {/* Hero Section */}
       <section className="relative px-6 py-4 bg-gradient-to-br from-purple-50 via-blue-50 to-purple-100 overflow-hidden min-h-screen">
         <div className="absolute inset-0 overflow-hidden">
           <div className="absolute top-20 right-20 w-64 h-64 border-2 border-purple-200 rounded-full opacity-30"></div>
@@ -50,36 +53,7 @@ export default function LandingPage() {
           <div className="absolute bottom-20 right-10 w-48 h-48 border-2 border-purple-300 rounded-full opacity-20"></div>
         </div>
 
-        {/* Navigation */}
-        <nav className="relative z-10 flex items-center justify-between mb-16">
-          <div className="flex items-center space-x-8">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                <span className="text-white font-bold text-sm">J</span>
-              </div>
-              <span className="text-xl font-bold text-gray-900">JobBoost</span>
-            </div>
-            <div className="hidden md:flex space-x-6">
-              <button onClick={() => handleCategoryClick("find-jobs")} className="text-gray-600 hover:text-gray-900">
-                Find Jobs
-              </button>
-              <button
-                onClick={() => handleCategoryClick("browse-employers")}
-                className="text-gray-600 hover:text-gray-900"
-              >
-                Browse Employers
-              </button>
-            </div>
-          </div>
-          <div className="flex items-center space-x-4">
-            <Link href="/" className="text-gray-600 hover:text-gray-900">
-              Login
-            </Link>
-            <Link href="/signup" className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700">
-              Sign Up
-            </Link>
-          </div>
-        </nav>
+
 
         {/* Hero Content */}
         <div className="relative z-10 max-w-7xl mx-auto">
