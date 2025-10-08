@@ -19,7 +19,7 @@ export default function LoginPage() {
      // Redirect nếu user đã đăng nhập
      useEffect(() => {
           if (!loading && user) {
-               router.push('/')
+               router.push('/find-jobs')
           }
      }, [user, loading, router])
 
@@ -51,7 +51,7 @@ export default function LoginPage() {
                setIsLoading(true)
                setError("")
                
-               const { error } = await authHelpers.signInWithOAuth('google')
+               const { data, error } = await authHelpers.signInWithOAuth('google')
                
                if (error) {
                     console.error('Error logging in with Google:', error.message)
@@ -83,7 +83,7 @@ export default function LoginPage() {
                if (data.user) {
                     console.log('Login successful:', data.user)
                     // Redirect đến trang dashboard hoặc home page
-                    router.push('/')
+                    router.push('/find-jobs')
                }
           } catch (err: unknown) {
                console.error('Unexpected error:', err)

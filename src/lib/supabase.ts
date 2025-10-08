@@ -49,6 +49,11 @@ export const authHelpers = {
     return supabase.auth.getUser();
   },
 
+  // Lấy session hiện tại
+  getSession: () => {
+    return supabase.auth.getSession();
+  },
+
   // Theo dõi thay đổi auth state
   onAuthStateChange: (callback: (event: string, session: unknown) => void) => {
     return supabase.auth.onAuthStateChange(callback);

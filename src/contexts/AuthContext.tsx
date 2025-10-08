@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signOut: () => Promise<void>
+  getAccessToken: () => string | null
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -24,6 +25,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data } = await authHelpers.getCurrentUser()
         setUser(data.user)
+
+        // Cũng lấy session để có access token
+        const { data: sessionData } = await authHelpers.getSession()
+        setSession(sessionData.session)
       } catch (error) {
         console.error('Error getting user:', error)
       } finally {
@@ -52,8 +57,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null)
   }
 
+  const getAccessToken = () => {
+    return session?.access_token || null
+  }
+
   return (
-    <AuthContext.Provider value={{ user, session, loading, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, signOut, getAccessToken }}>
       {children}
     </AuthContext.Provider>
   )
