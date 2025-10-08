@@ -100,6 +100,19 @@ export const api = {
           },
      },
 
+     // Applications APIs
+     applications: {
+          getAll: async (params?: { page?: number; limit?: number }) => {
+               const response = await apiClient.get('/applications', { params })
+               return response.data
+          },
+
+          apply: async (jobId: string) => {
+               const response = await apiClient.post(`/applications/${jobId}`)
+               return response.data
+          },
+     },
+
      // CVs APIs
      cvs: {
           // Get all user CVs
@@ -182,28 +195,15 @@ export const api = {
           getDirectUrl: (id: string | number) => {
                return `${API_BASE_URL}/cvs/${id}/download`
           },
-     // Applications APIs
-     applications: {
-          getAll: async (params?: { page?: number; limit?: number }) => {
-               const response = await apiClient.get('/applications', { params })
-               return response.data
-          },
-
-          apply: async (jobId: string) => {
-               const response = await apiClient.post(`/applications/${jobId}`)
-               return response.data
-          },
-     },
-
-     // Thêm các API khác tại đây khi cần
-     // Ví dụ:
-     // users: {
-     //   getProfile: async () => {
-     //     const response = await apiClient.get('/users/profile')
-     //     return response.data
-     //   },
-     // },
+          // Thêm các API khác tại đây khi cần
+          // Ví dụ:
+          // users: {
+          //   getProfile: async () => {
+          //     const response = await apiClient.get('/users/profile')
+          //     return response.data
+          //   },
+          // },
+     }
 }
-
 // Export apiClient cho trường hợp muốn custom call
 export default apiClient
