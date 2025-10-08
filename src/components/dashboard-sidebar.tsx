@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, MessageSquare, FileText, Search, Building2, User, Settings, HelpCircle } from "lucide-react"
+import { LayoutDashboard, MessageSquare, FileText, Search, Building2, User, Settings, HelpCircle, FileUser } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
@@ -12,6 +12,7 @@ const navItems = [
      { href: "/dashboard/applications", label: "My Applications", icon: FileText },
      { href: "/dashboard/find-jobs", label: "Find Jobs", icon: Search },
      { href: "/dashboard/employers", label: "Browse Employers", icon: Building2 },
+     { href: "/my-cv", label: "Your CV", icon: FileUser },
      { href: "/dashboard/profile", label: "My Public Profile", icon: User },
 ]
 
@@ -67,8 +68,8 @@ export function DashboardSidebar() {
                                         key={item.href}
                                         href={item.href}
                                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
-                                                  ? "bg-primary/10 text-primary"
-                                                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                                             ? "bg-primary/10 text-primary"
+                                             : "text-muted-foreground hover:bg-accent hover:text-foreground"
                                              }`}
                                    >
                                         <Icon className="w-5 h-5" />
