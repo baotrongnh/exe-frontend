@@ -177,19 +177,21 @@ Shows search context and clear button:
 
 ## API Integration
 
-The search parameter is sent to the backend API:
+The search parameter is sent to the backend API using the `title` parameter:
 
 ```
-GET /api/v1/jobs?page=1&limit=10&search=frontend
+GET /api/v1/jobs?page=1&limit=10&title=frontend
 ```
 
 Backend should handle the search by filtering jobs where the title contains the search term (case-insensitive recommended).
+
+**Note**: Changed from `search` to `title` parameter to match backend API requirements.
 
 ## Example Usage
 
 **Search for "frontend":**
 
-- URL params: `?search=frontend&page=1&limit=10`
+- URL params: `?title=frontend&page=1&limit=10`
 - Results: All jobs with "frontend" in title
 - Header: "Search Results for 'frontend'"
 
