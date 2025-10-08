@@ -7,7 +7,8 @@ import { Card } from "@/components/ui/card"
 import Link from "next/link"
 import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
-import { useParams } from "next/navigation"
+import { useParams, useRouter } from "next/navigation"
+import { useToast } from "@/components/toast"
 
 // Type cho Job Detail
 interface JobDetail {
@@ -39,10 +40,14 @@ interface ApiResponse {
 export default function JobDetailPage() {
      const params = useParams()
      const jobId = params.id as string
+     const router = useRouter()
+     const toast = useToast()
 
      const [job, setJob] = useState<JobDetail | null>(null)
      const [loading, setLoading] = useState(true)
      const [error, setError] = useState<string | null>(null)
+     const [applying, setApplying] = useState(false)
+     const [applied, setApplied] = useState(false)
 
      useEffect(() => {
           const fetchJobDetail = async () => {
@@ -63,6 +68,37 @@ export default function JobDetailPage() {
                fetchJobDetail()
           }
      }, [jobId])
+
+     // Handle apply job
+     const handleApply = async () => {
+          try {
+               setApplying(true)
+               const response = await api.applications.apply(jobId)
+
+               if (response.success) {
+                    toast.showToast('Apply job thành công!', 'success')
+                    setApplied(true)
+                    // Refresh job detail để cập nhật applications_count
+                    const jobResponse: ApiResponse = await api.jobs.getById(jobId)
+                    setJob(jobResponse.data)
+               }
+          } catch (err: any) {
+               console.error('Error applying job:', err)
+               const errorMessage = err.response?.data?.message || 'Có lỗi xảy ra khi apply job'
+
+               // Kiểm tra nếu cần upload CV
+               if (errorMessage === 'You must upload at least one active CV before applying for jobs') {
+                    toast.showToast('Bạn cần upload CV trước khi apply job', 'error')
+                    setTimeout(() => {
+                         router.push('/my-cv')
+                    }, 1500)
+               } else {
+                    toast.showToast(errorMessage, 'error')
+               }
+          } finally {
+               setApplying(false)
+          }
+     }
 
      // Helper functions
      const getJobTypeBadgeColor = (type: string) => {
@@ -194,7 +230,13 @@ export default function JobDetailPage() {
                                                   <Button variant="outline" size="icon">
                                                        <Share2 className="w-5 h-5" />
                                                   </Button>
-                                                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90 px-8">Apply</Button>
+                                                  <Button
+                                                       className={applied ? "bg-green-600 hover:bg-green-700 text-white px-8" : "bg-primary text-primary-foreground hover:bg-primary/90 px-8"}
+                                                       onClick={handleApply}
+                                                       disabled={applying || applied}
+                                                  >
+                                                       {applying ? 'Applying...' : applied ? 'Applied' : 'Apply'}
+                                                  </Button>
                                              </div>
                                         </div>
                                    </Card>
@@ -378,8 +420,12 @@ export default function JobDetailPage() {
 
                                    {/* Apply Button - Sticky */}
                                    <div className="sticky bottom-6">
-                                        <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base">
-                                             Apply Now
+                                        <Button
+                                             className={applied ? "w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base" : "w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base"}
+                                             onClick={handleApply}
+                                             disabled={applying || applied}
+                                        >
+                                             {applying ? 'Applying...' : applied ? 'Applied' : 'Apply Now'}
                                         </Button>
                                    </div>
                               </div>

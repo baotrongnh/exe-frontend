@@ -64,6 +64,22 @@ const updated = await api.jobs.update("job-id", {
 await api.jobs.delete("job-id");
 ```
 
+### 3. Gọi Applications API
+
+#### Apply job
+
+```typescript
+// Apply vào một job
+try {
+  const response = await api.applications.apply("job-id-here");
+  console.log("Apply thành công!", response);
+} catch (error) {
+  console.error("Lỗi khi apply:", error.response?.data?.message);
+}
+```
+
+**Lưu ý**: API này tự động sử dụng Bearer token từ Supabase authentication.
+
 ## 📊 Cấu trúc dữ liệu từ API
 
 ### Job Object

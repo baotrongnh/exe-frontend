@@ -8,11 +8,11 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const navItems = [
      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-     { href: "/dashboard/messages", label: "Messages", icon: MessageSquare, badge: 1 },
-     { href: "/dashboard/applications", label: "My Applications", icon: FileText },
-     { href: "/dashboard/find-jobs", label: "Find Jobs", icon: Search },
-     { href: "/dashboard/employers", label: "Browse Employers", icon: Building2 },
-     { href: "/dashboard/profile", label: "My Public Profile", icon: User },
+     { href: "/messages", label: "Messages", icon: MessageSquare, badge: 1 },
+     { href: "/my-applications", label: "My Applications", icon: FileText },
+     { href: "/find-jobs", label: "Find Jobs", icon: Search },
+     { href: "/employers", label: "Browse Employers", icon: Building2 },
+     { href: "/profile", label: "My Public Profile", icon: User },
 ]
 
 const settingsItems = [
@@ -67,8 +67,8 @@ export function DashboardSidebar() {
                                         key={item.href}
                                         href={item.href}
                                         className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-colors ${isActive
-                                                  ? "bg-primary/10 text-primary"
-                                                  : "text-muted-foreground hover:bg-accent hover:text-foreground"
+                                             ? "bg-primary/10 text-primary"
+                                             : "text-muted-foreground hover:bg-accent hover:text-foreground"
                                              }`}
                                    >
                                         <Icon className="w-5 h-5" />
