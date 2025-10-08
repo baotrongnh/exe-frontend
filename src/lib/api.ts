@@ -45,7 +45,7 @@ apiClient.interceptors.response.use(
 export const api = {
      // Jobs APIs
      jobs: {
-          getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
+          getAll: async (params?: { page?: number; limit?: number; search?: string; title?: string }) => {
                const response = await apiClient.get('/jobs', { params })
                return response.data
           },

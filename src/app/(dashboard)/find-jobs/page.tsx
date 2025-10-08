@@ -72,6 +72,7 @@ const FilterCheckbox = ({ label, count }: { label: string; count?: number }) => 
 
 export default function FindJobsPage() {
      const [jobs, setJobs] = useState<Job[]>([])
+     const [allJobs, setAllJobs] = useState<Job[]>([]) // Store all jobs for filtering
      const [loading, setLoading] = useState(true)
      const [error, setError] = useState<string | null>(null)
      const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
@@ -91,16 +92,13 @@ export default function FindJobsPage() {
           const fetchJobs = async () => {
                try {
                     setLoading(true)
-                    const params: { page: number; limit: number; search?: string } = {
-                         page: pagination.page,
-                         limit: pagination.limit
-                    }
-                    if (searchQuery) {
-                         params.search = searchQuery
-                    }
-                    const response: ApiResponse = await api.jobs.getAll(params)
-                    setJobs(response.data || [])
-                    setPagination(response.pagination)
+                    // Fetch all jobs without search parameter
+                    const response: ApiResponse = await api.jobs.getAll({
+                         page: 1,
+                         limit: 100 // Fetch more jobs for client-side filtering
+                    })
+                    console.log('All jobs fetched:', response)
+                    setAllJobs(response.data || [])
                     setError(null)
                } catch (err: any) {
                     console.error('Error fetching jobs:', err)
@@ -111,7 +109,41 @@ export default function FindJobsPage() {
           }
 
           fetchJobs()
-     }, [pagination.page, searchQuery])
+     }, []) // Only fetch once on mount
+
+     // Filter jobs based on search query
+     useEffect(() => {
+          if (!searchQuery) {
+               // No search - show all jobs with pagination
+               const startIndex = (pagination.page - 1) * pagination.limit
+               const endIndex = startIndex + pagination.limit
+               const paginatedJobs = allJobs.slice(startIndex, endIndex)
+               setJobs(paginatedJobs)
+               setPagination(prev => ({
+                    ...prev,
+                    total: allJobs.length,
+                    pages: Math.ceil(allJobs.length / prev.limit)
+               }))
+          } else {
+               // Filter jobs by search query (case-insensitive)
+               const filtered = allJobs.filter(job =>
+                    job.title.toLowerCase().includes(searchQuery.toLowerCase())
+               )
+               console.log('Filtered jobs:', filtered)
+
+               // Apply pagination to filtered results
+               const startIndex = (pagination.page - 1) * pagination.limit
+               const endIndex = startIndex + pagination.limit
+               const paginatedJobs = filtered.slice(startIndex, endIndex)
+
+               setJobs(paginatedJobs)
+               setPagination(prev => ({
+                    ...prev,
+                    total: filtered.length,
+                    pages: Math.ceil(filtered.length / prev.limit)
+               }))
+          }
+     }, [allJobs, searchQuery, pagination.page, pagination.limit])
 
      // Debounce search input
      useEffect(() => {
@@ -174,6 +206,26 @@ export default function FindJobsPage() {
           } finally {
                setApplyingJobId(null)
           }
+     }
+
+     // Highlight matching text in job title
+     const highlightText = (text: string, query: string) => {
+          if (!query) return text
+
+          const parts = text.split(new RegExp(`(${query})`, 'gi'))
+          return (
+               <>
+                    {parts.map((part, index) =>
+                         part.toLowerCase() === query.toLowerCase() ? (
+                              <span key={index} className="font-bold text-primary bg-primary/10 px-1 rounded">
+                                   {part}
+                              </span>
+                         ) : (
+                              <span key={index}>{part}</span>
+                         )
+                    )}
+               </>
+          )
      }
 
      // Helper functions
@@ -345,7 +397,12 @@ export default function FindJobsPage() {
 
                               {!loading && !error && jobs.length === 0 && (
                                    <div className="text-center py-10">
-                                        <p className="text-muted-foreground">Không có công việc nào</p>
+                                        <p className="text-muted-foreground">
+                                             {searchQuery
+                                                  ? `Không tìm thấy công việc nào với từ khóa "${searchQuery}"`
+                                                  : 'Không có công việc nào'
+                                             }
+                                        </p>
                                    </div>
                               )}
 
@@ -360,7 +417,9 @@ export default function FindJobsPage() {
                                                             {getInitials(job.title)}
                                                        </div>
                                                        <div className="flex-1">
-                                                            <h3 className="font-semibold text-lg text-foreground mb-1">{job.title}</h3>
+                                                            <h3 className="font-semibold text-lg text-foreground mb-1">
+                                                                 {highlightText(job.title, searchQuery)}
+                                                            </h3>
                                                             <p className="text-sm text-muted-foreground mb-2">
                                                                  {formatBudget(job)} • {job.budget_type === 'HOURLY' ? 'Per Hour' : 'Fixed Price'}
                                                             </p>
