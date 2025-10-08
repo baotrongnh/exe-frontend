@@ -1,170 +1,98 @@
-import apiClient from './api-client';
+import axios from 'axios'
+import { supabase } from './supabase'
 
-// User API endpoints
-export interface User {
-     id: string;
-     email: string;
-     full_name?: string;
-     avatar_url?: string;
-     role?: 'job_seeker' | 'employer' | 'admin';
-     created_at: string;
-     updated_at: string;
+// Base URL cho API backend
+const API_BASE_URL = 'http://14.169.93.37:3003/api/v1'
+
+// Tạo axios instance
+const apiClient = axios.create({
+     baseURL: API_BASE_URL,
+     headers: {
+          'Content-Type': 'application/json',
+     },
+})
+
+// Interceptor để tự động thêm access token vào header
+apiClient.interceptors.request.use(
+     async (config) => {
+          const { data: { session } } = await supabase.auth.getSession()
+
+          if (session?.access_token) {
+               config.headers.Authorization = `Bearer ${session.access_token}`
+          }
+
+          return config
+     },
+     (error) => {
+          return Promise.reject(error)
+     }
+)
+
+// Interceptor để xử lý response errors
+apiClient.interceptors.response.use(
+     (response) => response,
+     (error) => {
+          if (error.response?.status === 401) {
+               // Token hết hạn hoặc không hợp lệ
+               console.error('Unauthorized access - redirecting to login')
+               // Có thể redirect đến trang login tại đây nếu cần
+          }
+          return Promise.reject(error)
+     }
+)
+
+// API functions
+export const api = {
+     // Jobs APIs
+     jobs: {
+          getAll: async (params?: { page?: number; limit?: number; search?: string }) => {
+               const response = await apiClient.get('/jobs', { params })
+               return response.data
+          },
+
+          getById: async (id: string | number) => {
+               const response = await apiClient.get(`/jobs/${id}`)
+               return response.data
+          },
+
+          create: async (jobData: any) => {
+               const response = await apiClient.post('/jobs', jobData)
+               return response.data
+          },
+
+          update: async (id: string | number, jobData: any) => {
+               const response = await apiClient.put(`/jobs/${id}`, jobData)
+               return response.data
+          },
+
+          delete: async (id: string | number) => {
+               const response = await apiClient.delete(`/jobs/${id}`)
+               return response.data
+          },
+     },
+
+     // Applications APIs
+     applications: {
+          getAll: async (params?: { page?: number; limit?: number }) => {
+               const response = await apiClient.get('/applications', { params })
+               return response.data
+          },
+
+          apply: async (jobId: string) => {
+               const response = await apiClient.post(`/applications/${jobId}`)
+               return response.data
+          },
+     },
+
+     // Thêm các API khác tại đây khi cần
+     // Ví dụ:
+     // users: {
+     //   getProfile: async () => {
+     //     const response = await apiClient.get('/users/profile')
+     //     return response.data
+     //   },
+     // },
 }
 
-export interface UserProfile {
-     id: string;
-     user_id: string;
-     bio?: string;
-     skills?: string[];
-     experience?: string;
-     location?: string;
-     phone?: string;
-     website?: string;
-     resume_url?: string;
-}
-
-class UserAPI {
-     // Lấy thông tin profile của user hiện tại
-     async getCurrentUserProfile(): Promise<UserProfile> {
-          try {
-               const response = await apiClient.get<{ data: UserProfile }>('/user/profile');
-               return response.data.data;
-          } catch (error) {
-               console.error('Error fetching user profile:', error);
-               throw error;
-          }
-     }
-
-     // Cập nhật profile
-     async updateProfile(profileData: Partial<UserProfile>): Promise<UserProfile> {
-          try {
-               const response = await apiClient.put<{ data: UserProfile }>('/user/profile', profileData);
-               return response.data.data;
-          } catch (error) {
-               console.error('Error updating profile:', error);
-               throw error;
-          }
-     }
-
-     // Upload resume
-     async uploadResume(file: File): Promise<{ resume_url: string }> {
-          try {
-               const formData = new FormData();
-               formData.append('resume', file);
-
-               const response = await apiClient.post<{ data: { resume_url: string } }>('/user/upload-resume', formData, {
-                    headers: {
-                         'Content-Type': 'multipart/form-data',
-                    },
-               });
-               return response.data.data;
-          } catch (error) {
-               console.error('Error uploading resume:', error);
-               throw error;
-          }
-     }
-}
-
-// Application API endpoints
-export interface JobApplication {
-     id: string;
-     job_id: string;
-     user_id: string;
-     status: 'pending' | 'accepted' | 'rejected' | 'withdrawn';
-     cover_letter?: string;
-     applied_at: string;
-     updated_at: string;
-}
-
-class ApplicationAPI {
-     // Apply for a job using the endpoint applications/:jobId
-     async applyForJob(jobId: string, coverLetter?: string): Promise<JobApplication> {
-          try {
-               const response = await apiClient.post<{ success: boolean; message: string; data?: JobApplication }>(`/applications/${jobId}`, {
-                    cover_letter: coverLetter,
-               });
-
-               if (response.data.success && response.data.data) {
-                    return response.data.data;
-               } else {
-                    // Handle case where success is false (already applied)
-                    throw new Error(response.data.message);
-               }
-          } catch (error: any) {
-               console.error('Error applying for job:', error);
-
-               // If it's an axios error with response data, preserve the error format
-               if (error.response?.data) {
-                    const customError = new Error(error.response.data.message || 'Failed to apply for job');
-                    (customError as any).response = error.response;
-                    throw customError;
-               }
-
-               throw error;
-          }
-     }
-
-     // Get user's applications
-     async getUserApplications(status?: string): Promise<JobApplication[]> {
-          try {
-               const params = status ? `?status=${status}` : '';
-               const response = await apiClient.get<{ data: JobApplication[] }>(`/applications/user${params}`);
-               return response.data.data;
-          } catch (error) {
-               console.error('Error fetching user applications:', error);
-               throw error;
-          }
-     }
-
-     // Withdraw application
-     async withdrawApplication(applicationId: string): Promise<void> {
-          try {
-               await apiClient.delete(`/applications/${applicationId}`);
-          } catch (error) {
-               console.error('Error withdrawing application:', error);
-               throw error;
-          }
-     }
-}
-
-// Company/Employer API endpoints
-export interface Company {
-     id: string;
-     name: string;
-     description?: string;
-     website?: string;
-     logo_url?: string;
-     location?: string;
-     industry?: string;
-     size?: string;
-     founded_year?: number;
-}
-
-class CompanyAPI {
-     // Get company details
-     async getCompanyById(companyId: string): Promise<Company> {
-          try {
-               const response = await apiClient.get<{ data: Company }>(`/companies/${companyId}`);
-               return response.data.data;
-          } catch (error) {
-               console.error('Error fetching company:', error);
-               throw error;
-          }
-     }
-
-     // Get jobs by company
-     async getCompanyJobs(companyId: string): Promise<any[]> {
-          try {
-               const response = await apiClient.get<{ data: any[] }>(`/companies/${companyId}/jobs`);
-               return response.data.data;
-          } catch (error) {
-               console.error('Error fetching company jobs:', error);
-               throw error;
-          }
-     }
-}
-
-// Export API instances
-export const userAPI = new UserAPI();
-export const applicationAPI = new ApplicationAPI();
-export const companyAPI = new CompanyAPI();
+// Export apiClient cho trường hợp muốn custom call
+export default apiClient
