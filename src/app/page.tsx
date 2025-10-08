@@ -117,12 +117,14 @@ export default function LandingPage() {
                     <option>Milan, Italy</option>
                   </select>
                 </div>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium"
-                >
-                  Search my job
-                </button>
+                <Link href='/find-jobs'>
+                  <button
+                    type="submit"
+                    className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 font-medium"
+                  >
+                    Search my job
+                  </button>
+                </Link>
               </form>
 
               <div className="text-sm text-gray-500">

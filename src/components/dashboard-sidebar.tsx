@@ -8,12 +8,12 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 
 const navItems = [
      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-     { href: "/dashboard/messages", label: "Messages", icon: MessageSquare, badge: 1 },
-     { href: "/dashboard/applications", label: "My Applications", icon: FileText },
-     { href: "/dashboard/find-jobs", label: "Find Jobs", icon: Search },
-     { href: "/dashboard/employers", label: "Browse Employers", icon: Building2 },
+     { href: "/messages", label: "Messages", icon: MessageSquare, badge: 1 },
+     { href: "/my-applications", label: "My Applications", icon: FileText },
+     { href: "/find-jobs", label: "Find Jobs", icon: Search },
+     { href: "/employers", label: "Browse Employers", icon: Building2 },
+     { href: "/profile", label: "My Public Profile", icon: User },
      { href: "/my-cv", label: "Your CV", icon: FileUser },
-     { href: "/dashboard/profile", label: "My Public Profile", icon: User },
 ]
 
 const settingsItems = [

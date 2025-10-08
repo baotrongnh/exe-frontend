@@ -74,7 +74,7 @@ apiClient.interceptors.response.use(
 export const api = {
      // Jobs APIs
      jobs: {
-          getAll: async (params?: { page?: number; limit?: number }) => {
+          getAll: async (params?: { page?: number; limit?: number; search?: string; title?: string }) => {
                const response = await apiClient.get('/jobs', { params })
                return response.data
           },
@@ -181,6 +181,17 @@ export const api = {
           // Get direct API URL (for reference only, requires auth header)
           getDirectUrl: (id: string | number) => {
                return `${API_BASE_URL}/cvs/${id}/download`
+          },
+     // Applications APIs
+     applications: {
+          getAll: async (params?: { page?: number; limit?: number }) => {
+               const response = await apiClient.get('/applications', { params })
+               return response.data
+          },
+
+          apply: async (jobId: string) => {
+               const response = await apiClient.post(`/applications/${jobId}`)
+               return response.data
           },
      },
 

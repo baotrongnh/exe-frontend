@@ -7,9 +7,12 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Bell, ChevronDown, ChevronLeft, ChevronRight, Grid3x3, List, MapPin, Search } from "lucide-react"
+import { Bell, ChevronDown, ChevronLeft, ChevronRight, Search } from "lucide-react"
 import { useState, useEffect } from "react"
 import { api } from "@/lib/api"
+import Link from "next/link"
+import { useToast } from "@/components/toast"
+import { useRouter } from "next/navigation"
 
 // Type cho Job từ API
 interface Job {
@@ -69,22 +72,33 @@ const FilterCheckbox = ({ label, count }: { label: string; count?: number }) => 
 
 export default function FindJobsPage() {
      const [jobs, setJobs] = useState<Job[]>([])
+     const [allJobs, setAllJobs] = useState<Job[]>([]) // Store all jobs for filtering
      const [loading, setLoading] = useState(true)
      const [error, setError] = useState<string | null>(null)
+     const [applyingJobId, setApplyingJobId] = useState<string | null>(null)
+     const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set())
+     const [searchQuery, setSearchQuery] = useState('')
+     const [searchInput, setSearchInput] = useState('')
      const [pagination, setPagination] = useState({
           total: 0,
           page: 1,
           limit: 10,
           pages: 0
      })
+     const toast = useToast()
+     const router = useRouter()
 
      useEffect(() => {
           const fetchJobs = async () => {
                try {
                     setLoading(true)
-                    const response: ApiResponse = await api.jobs.getAll({ page: pagination.page, limit: pagination.limit })
-                    setJobs(response.data || [])
-                    setPagination(response.pagination)
+                    // Fetch all jobs without search parameter
+                    const response: ApiResponse = await api.jobs.getAll({
+                         page: 1,
+                         limit: 100 // Fetch more jobs for client-side filtering
+                    })
+                    console.log('All jobs fetched:', response)
+                    setAllJobs(response.data || [])
                     setError(null)
                } catch (err: any) {
                     console.error('Error fetching jobs:', err)
@@ -95,7 +109,124 @@ export default function FindJobsPage() {
           }
 
           fetchJobs()
-     }, [pagination.page])
+     }, []) // Only fetch once on mount
+
+     // Filter jobs based on search query
+     useEffect(() => {
+          if (!searchQuery) {
+               // No search - show all jobs with pagination
+               const startIndex = (pagination.page - 1) * pagination.limit
+               const endIndex = startIndex + pagination.limit
+               const paginatedJobs = allJobs.slice(startIndex, endIndex)
+               setJobs(paginatedJobs)
+               setPagination(prev => ({
+                    ...prev,
+                    total: allJobs.length,
+                    pages: Math.ceil(allJobs.length / prev.limit)
+               }))
+          } else {
+               // Filter jobs by search query (case-insensitive)
+               const filtered = allJobs.filter(job =>
+                    job.title.toLowerCase().includes(searchQuery.toLowerCase())
+               )
+               console.log('Filtered jobs:', filtered)
+
+               // Apply pagination to filtered results
+               const startIndex = (pagination.page - 1) * pagination.limit
+               const endIndex = startIndex + pagination.limit
+               const paginatedJobs = filtered.slice(startIndex, endIndex)
+
+               setJobs(paginatedJobs)
+               setPagination(prev => ({
+                    ...prev,
+                    total: filtered.length,
+                    pages: Math.ceil(filtered.length / prev.limit)
+               }))
+          }
+     }, [allJobs, searchQuery, pagination.page, pagination.limit])
+
+     // Debounce search input
+     useEffect(() => {
+          const timer = setTimeout(() => {
+               setSearchQuery(searchInput)
+               // Reset về trang 1 khi search
+               if (searchInput !== searchQuery) {
+                    setPagination(prev => ({ ...prev, page: 1 }))
+               }
+          }, 500) // 500ms debounce
+
+          return () => clearTimeout(timer)
+     }, [searchInput])
+
+     // Handle search
+     const handleSearch = () => {
+          setSearchQuery(searchInput)
+          setPagination(prev => ({ ...prev, page: 1 }))
+     }
+
+     const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+          setSearchInput(e.target.value)
+     }
+
+     const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+          if (e.key === 'Enter') {
+               handleSearch()
+          }
+     }
+
+     // Handle apply job
+     const handleApply = async (jobId: string, e: React.MouseEvent) => {
+          e.preventDefault()
+          e.stopPropagation()
+
+          try {
+               setApplyingJobId(jobId)
+               const response = await api.applications.apply(jobId)
+
+               if (response.success) {
+                    toast.showToast('Apply job thành công!', 'success')
+                    setAppliedJobs(prev => new Set(prev).add(jobId))
+                    // Refresh job list để cập nhật applications_count
+                    const jobsResponse: ApiResponse = await api.jobs.getAll({ page: pagination.page, limit: pagination.limit })
+                    setJobs(jobsResponse.data || [])
+               }
+          } catch (err: any) {
+               console.error('Error applying job:', err)
+               const errorMessage = err.response?.data?.message || 'Có lỗi xảy ra khi apply job'
+
+               // Kiểm tra nếu cần upload CV
+               if (errorMessage === 'You must upload at least one active CV before applying for jobs') {
+                    toast.showToast('Bạn cần upload CV trước khi apply job', 'error')
+                    setTimeout(() => {
+                         router.push('/my-cv')
+                    }, 1500)
+               } else {
+                    toast.showToast(errorMessage, 'error')
+               }
+          } finally {
+               setApplyingJobId(null)
+          }
+     }
+
+     // Highlight matching text in job title
+     const highlightText = (text: string, query: string) => {
+          if (!query) return text
+
+          const parts = text.split(new RegExp(`(${query})`, 'gi'))
+          return (
+               <>
+                    {parts.map((part, index) =>
+                         part.toLowerCase() === query.toLowerCase() ? (
+                              <span key={index} className="font-bold text-primary bg-primary/10 px-1 rounded">
+                                   {part}
+                              </span>
+                         ) : (
+                              <span key={index}>{part}</span>
+                         )
+                    )}
+               </>
+          )
+     }
 
      // Helper functions
      const getJobTypeBadgeColor = (type: string) => {
@@ -154,20 +285,23 @@ export default function FindJobsPage() {
 
                {/* Search Bar */}
                <div className="bg-card border-b border-border px-8 py-6">
-                    <div className="flex gap-3 mb-4">
+                    <div className="flex gap-3">
                          <div className="flex-1 relative">
                               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                              <Input placeholder="Job title or keyword" className="pl-10" />
+                              <Input
+                                   placeholder="Job title or keyword"
+                                   className="pl-10"
+                                   value={searchInput}
+                                   onChange={handleSearchInputChange}
+                                   onKeyPress={handleKeyPress}
+                              />
                          </div>
-                         <div className="w-80 relative">
-                              <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                              <Input placeholder="Thành phố Hồ Chí Minh, Việt Nam" className="pl-10" />
-                         </div>
-                         <Button className="bg-primary text-primary-foreground hover:bg-primary/90 px-8">Search</Button>
-                    </div>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                         <span>Popular:</span>
-                         <span>UI Designer, UX Researcher, Android, Admin</span>
+                         <Button
+                              className="bg-primary text-primary-foreground hover:bg-primary/90 px-8"
+                              onClick={handleSearch}
+                         >
+                              Search
+                         </Button>
                     </div>
                </div>
 
@@ -226,25 +360,24 @@ export default function FindJobsPage() {
                          {/* Results Header */}
                          <div className="flex items-center justify-between mb-6">
                               <div>
-                                   <h2 className="text-xl font-bold text-foreground mb-1">All Jobs</h2>
+                                   <h2 className="text-xl font-bold text-foreground mb-1">
+                                        {searchQuery ? `Search Results for "${searchQuery}"` : 'All Jobs'}
+                                   </h2>
                                    <p className="text-sm text-muted-foreground">
                                         Showing {jobs.length} of {pagination.total} results
+                                        {searchQuery && (
+                                             <button
+                                                  onClick={() => {
+                                                       setSearchInput('')
+                                                       setSearchQuery('')
+                                                       setPagination(prev => ({ ...prev, page: 1 }))
+                                                  }}
+                                                  className="ml-2 text-primary hover:underline"
+                                             >
+                                                  Clear search
+                                             </button>
+                                        )}
                                    </p>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                   <span className="text-sm text-muted-foreground">Sort by:</span>
-                                   <Button variant="outline" className="gap-2 bg-transparent">
-                                        Most relevant
-                                        <ChevronDown className="w-4 h-4" />
-                                   </Button>
-                                   <div className="flex gap-1 ml-2">
-                                        <Button variant="ghost" size="icon">
-                                             <Grid3x3 className="w-5 h-5" />
-                                        </Button>
-                                        <Button variant="ghost" size="icon">
-                                             <List className="w-5 h-5 text-primary" />
-                                        </Button>
-                                   </div>
                               </div>
                          </div>
 
@@ -264,60 +397,75 @@ export default function FindJobsPage() {
 
                               {!loading && !error && jobs.length === 0 && (
                                    <div className="text-center py-10">
-                                        <p className="text-muted-foreground">Không có công việc nào</p>
+                                        <p className="text-muted-foreground">
+                                             {searchQuery
+                                                  ? `Không tìm thấy công việc nào với từ khóa "${searchQuery}"`
+                                                  : 'Không có công việc nào'
+                                             }
+                                        </p>
                                    </div>
                               )}
 
                               {!loading && !error && jobs.map((job) => (
-                                   <Card key={job.id} className="p-6">
-                                        <div className="flex items-start justify-between">
-                                             <div className="flex gap-4">
-                                                  <div
-                                                       className={`w-14 h-14 rounded-lg ${getRandomColor()} flex items-center justify-center text-white text-xl font-bold flex-shrink-0`}
-                                                  >
-                                                       {getInitials(job.title)}
-                                                  </div>
-                                                  <div className="flex-1">
-                                                       <h3 className="font-semibold text-lg text-foreground mb-1">{job.title}</h3>
-                                                       <p className="text-sm text-muted-foreground mb-2">
-                                                            {formatBudget(job)} • {job.budget_type === 'HOURLY' ? 'Per Hour' : 'Fixed Price'}
-                                                       </p>
-                                                       <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
-                                                            {job.description}
-                                                       </p>
-                                                       <div className="flex flex-wrap gap-2">
-                                                            <Badge variant="secondary" className={getJobTypeBadgeColor(job.job_type)}>
-                                                                 {job.job_type.replace('_', ' ')}
-                                                            </Badge>
-                                                            <Badge variant="secondary" className={getExperienceLevelBadgeColor(job.experience_level)}>
-                                                                 {job.experience_level}
-                                                            </Badge>
-                                                            {job.skills_required?.slice(0, 3).map((skill: string, index: number) => (
-                                                                 <Badge key={index} variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/10">
-                                                                      {skill}
+                                   <Link key={job.id} href={`/find-jobs/${job.id}`}>
+                                        <Card className="p-6 hover:shadow-lg transition-shadow cursor-pointer">
+                                             <div className="flex items-start justify-between">
+                                                  <div className="flex gap-4">
+                                                       <div
+                                                            className={`w-14 h-14 rounded-lg ${getRandomColor()} flex items-center justify-center text-white text-xl font-bold flex-shrink-0`}
+                                                       >
+                                                            {getInitials(job.title)}
+                                                       </div>
+                                                       <div className="flex-1">
+                                                            <h3 className="font-semibold text-lg text-foreground mb-1">
+                                                                 {highlightText(job.title, searchQuery)}
+                                                            </h3>
+                                                            <p className="text-sm text-muted-foreground mb-2">
+                                                                 {formatBudget(job)} • {job.budget_type === 'HOURLY' ? 'Per Hour' : 'Fixed Price'}
+                                                            </p>
+                                                            <p className="text-sm text-muted-foreground mb-3 line-clamp-2">
+                                                                 {job.description}
+                                                            </p>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                 <Badge variant="secondary" className={getJobTypeBadgeColor(job.job_type)}>
+                                                                      {job.job_type.replace('_', ' ')}
                                                                  </Badge>
-                                                            ))}
-                                                            {job.skills_required?.length > 3 && (
-                                                                 <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100">
-                                                                      +{job.skills_required.length - 3} more
+                                                                 <Badge variant="secondary" className={getExperienceLevelBadgeColor(job.experience_level)}>
+                                                                      {job.experience_level}
                                                                  </Badge>
-                                                            )}
+                                                                 {job.skills_required?.slice(0, 3).map((skill: string, index: number) => (
+                                                                      <Badge key={index} variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/10">
+                                                                           {skill}
+                                                                      </Badge>
+                                                                 ))}
+                                                                 {job.skills_required?.length > 3 && (
+                                                                      <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100">
+                                                                           +{job.skills_required.length - 3} more
+                                                                      </Badge>
+                                                                 )}
+                                                            </div>
                                                        </div>
                                                   </div>
-                                             </div>
-                                             <div className="text-right flex flex-col gap-2">
-                                                  <Button className="bg-primary text-primary-foreground hover:bg-primary/90">Apply</Button>
-                                                  <p className="text-xs text-muted-foreground">
-                                                       <span className="font-semibold text-foreground">{job.applications_count} applied</span>
-                                                  </p>
-                                                  {job.deadline && (
+                                                  <div className="text-right flex flex-col gap-2">
+                                                       <Button
+                                                            className={appliedJobs.has(job.id) ? "bg-green-600 hover:bg-green-700 text-white" : "bg-primary text-primary-foreground hover:bg-primary/90"}
+                                                            onClick={(e) => handleApply(job.id, e)}
+                                                            disabled={applyingJobId === job.id || appliedJobs.has(job.id)}
+                                                       >
+                                                            {applyingJobId === job.id ? 'Applying...' : appliedJobs.has(job.id) ? 'Applied' : 'Apply'}
+                                                       </Button>
                                                        <p className="text-xs text-muted-foreground">
-                                                            Deadline: {new Date(job.deadline).toLocaleDateString('vi-VN')}
+                                                            <span className="font-semibold text-foreground">{job.applications_count} applied</span>
                                                        </p>
-                                                  )}
+                                                       {job.deadline && (
+                                                            <p className="text-xs text-muted-foreground">
+                                                                 Deadline: {new Date(job.deadline).toLocaleDateString('vi-VN')}
+                                                            </p>
+                                                       )}
+                                                  </div>
                                              </div>
-                                        </div>
-                                   </Card>
+                                        </Card>
+                                   </Link>
                               ))}
                          </div>
 
