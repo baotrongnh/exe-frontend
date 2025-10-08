@@ -41,7 +41,7 @@ export function DetailModal({
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent
-                className="max-w-[95vw] w-[95vw] max-h-[95vh] h-[90vh] overflow-auto"
+                className="max-w-[80vw] w-[80vw] max-h-[90vh] h-[90vh] overflow-auto"
                 style={{
                     position: 'fixed',
                     top: '50%',
