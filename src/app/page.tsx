@@ -1,5 +1,6 @@
 "use client"
 
+import Navbar from "@/components/Navbar"
 import Link from "next/link"
 import { useState } from "react"
 
@@ -42,6 +43,8 @@ export default function LandingPage() {
 
   return (
     <div className="min-h-screen bg-white">
+
+      <Navbar />
       
       
       {/* Hero Section */}
