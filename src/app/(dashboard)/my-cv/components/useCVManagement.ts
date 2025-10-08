@@ -2,10 +2,12 @@ import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
+import { useToast } from '@/components/toast'
 import type { CV } from './types'
 
 export function useCVManagement() {
     const { user, loading: authLoading, getAccessToken, signOut } = useAuth()
+    const { showToast } = useToast()
     const router = useRouter()
     const [cvList, setCvList] = useState<CV[]>([])
     const [loading, setLoading] = useState(false)
@@ -121,12 +123,12 @@ export function useCVManagement() {
                     handleAuthError()
                 }
             } else {
-                alert(`Failed to load CVs: ${errorMessage}. Please try again.`)
+                showToast(`Failed to load CVs: ${errorMessage}. Please try again.`, 'error')
             }
         } finally {
             setLoading(false)
         }
-    }, [user, getAccessToken, handleAuthError])
+    }, [user, getAccessToken, handleAuthError, showToast])
 
     // Load CVs on component mount
     useEffect(() => {

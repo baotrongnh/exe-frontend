@@ -12,8 +12,10 @@ import {
     useCVManagement,
     type CV
 } from './components'
+import { useToast } from '@/components/toast'
 
 export default function MyCV() {
+    const { showToast } = useToast()
     const {
         cvList,
         loading,
@@ -54,14 +56,14 @@ export default function MyCV() {
         if (file && file.type === 'application/pdf') {
             setSelectedFile(file)
         } else {
-            alert('Please select a PDF file only.')
+            showToast('Please select a PDF file only.', 'error')
             event.target.value = ''
         }
     }
 
     const handleUploadCV = async () => {
         if (!cvName.trim() || !cvDescription.trim() || !selectedFile) {
-            alert('Please fill in all fields and select a PDF file.')
+            showToast('Please fill in all fields and select a PDF file.', 'error')
             return
         }
 
@@ -77,9 +79,12 @@ export default function MyCV() {
             setCvDescription('')
             setSelectedFile(null)
             setIsUploadModalOpen(false)
+
+            // Show success message
+            showToast('CV uploaded successfully!', 'success')
         } catch (error) {
             console.error('Upload error:', error)
-            alert('Failed to upload CV. Please try again.')
+            showToast('Failed to upload CV. Please try again.', 'error')
         }
     }
 
@@ -88,9 +93,12 @@ export default function MyCV() {
             await deleteCV(id)
             setShowActionMenu(null)
             setIsDetailModalOpen(false)
+
+            // Show success message
+            showToast('CV deleted successfully!', 'success')
         } catch (error) {
             console.error('Delete error:', error)
-            alert('Failed to delete CV. Please try again.')
+            showToast('Failed to delete CV. Please try again.', 'error')
         }
     }
 
