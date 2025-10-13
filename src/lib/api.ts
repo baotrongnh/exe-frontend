@@ -195,14 +195,49 @@ export const api = {
           getDirectUrl: (id: string | number) => {
                return `${API_BASE_URL}/cvs/${id}/download`
           },
-          // Thêm các API khác tại đây khi cần
-          // Ví dụ:
-          // users: {
-          //   getProfile: async () => {
-          //     const response = await apiClient.get('/users/profile')
-          //     return response.data
-          //   },
-          // },
+     },
+
+     // Conversations APIs (Chat Feature)
+     conversations: {
+          // Get all conversations for the authenticated user
+          getAll: async () => {
+               const response = await apiClient.get('/conversations')
+               return response.data
+          },
+
+          // Create a new conversation
+          create: async (data: { freelancerId: string; jobId?: string }) => {
+               const response = await apiClient.post('/conversations', data)
+               return response.data
+          },
+
+          // Get messages in a conversation
+          getMessages: async (conversationId: string, params?: { limit?: number; offset?: number }) => {
+               const response = await apiClient.get(`/conversations/${conversationId}/messages`, { params })
+               return response.data
+          },
+
+          // Send a message in a conversation
+          sendMessage: async (conversationId: string, data: {
+               content: string;
+               messageType?: 'text' | 'image' | 'file' | 'system';
+               fileUrl?: string
+          }) => {
+               const response = await apiClient.post(`/conversations/${conversationId}/messages`, data)
+               return response.data
+          },
+
+          // Mark messages as read
+          markAsRead: async (conversationId: string) => {
+               const response = await apiClient.patch(`/conversations/${conversationId}/read`)
+               return response.data
+          },
+
+          // Get unread message count
+          getUnreadCount: async () => {
+               const response = await apiClient.get('/conversations/unread-count')
+               return response.data
+          },
      }
 }
 // Export apiClient cho trường hợp muốn custom call
