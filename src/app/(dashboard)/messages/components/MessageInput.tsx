@@ -7,12 +7,14 @@ import { Send } from "lucide-react"
 
 interface MessageInputProps {
     onSendMessage: (message: string) => void
+    onTyping?: (content: string) => void
     isLoading?: boolean
     placeholder?: string
 }
 
 export function MessageInput({
     onSendMessage,
+    onTyping,
     isLoading = false,
     placeholder = "Type your message..."
 }: MessageInputProps) {
@@ -39,7 +41,10 @@ export function MessageInput({
                 <div className="flex-1">
                     <Textarea
                         value={message}
-                        onChange={(e) => setMessage(e.target.value)}
+                        onChange={(e) => {
+                            setMessage(e.target.value)
+                            onTyping?.(e.target.value)
+                        }}
                         onKeyDown={handleKeyDown}
                         placeholder={placeholder}
                         className="min-h-[40px] resize-none border-gray-300 focus:border-[#4640DE] focus:ring-[#4640DE] rounded-lg"

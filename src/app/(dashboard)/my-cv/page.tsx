@@ -37,6 +37,21 @@ export default function MyCV() {
     const [cvDescription, setCvDescription] = useState('')
     const [selectedFile, setSelectedFile] = useState<File | null>(null)
 
+    // Failsafe: show error after loading for too long
+    const [loadingTimeout, setLoadingTimeout] = useState(false)
+
+    React.useEffect(() => {
+        if (loading && user) {
+            const timer = setTimeout(() => {
+                setLoadingTimeout(true)
+            }, 15000) // 15 seconds timeout
+
+            return () => clearTimeout(timer)
+        } else {
+            setLoadingTimeout(false)
+        }
+    }, [loading, user])
+
     // Show loading if auth is still loading
     if (authLoading) {
         return <LoadingSpinner />
@@ -127,6 +142,21 @@ export default function MyCV() {
                     showActionMenu={showActionMenu}
                     onToggleActionMenu={setShowActionMenu}
                 />
+
+                {/* Show timeout message if loading takes too long */}
+                {loadingTimeout && (
+                    <div className="text-center p-4 bg-yellow-100 border border-yellow-300 rounded-lg mt-4">
+                        <p className="text-yellow-800">
+                            Loading is taking longer than expected. Please check your internet connection or try refreshing the page.
+                        </p>
+                        <button
+                            onClick={() => window.location.reload()}
+                            className="mt-2 px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700"
+                        >
+                            Refresh Page
+                        </button>
+                    </div>
+                )}
 
                 <UploadModal
                     isOpen={isUploadModalOpen}

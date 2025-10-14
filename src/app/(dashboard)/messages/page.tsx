@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useEffect, useCallback, useRef } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
@@ -14,10 +15,26 @@ import {
     getMessagesByThreadId,
     sendMessage,
     getCandidateById,
-    markMessagesAsRead
+    markMessagesAsRead,
+    useChat,
+    transformMessageToUI,
+    getCurrentUserId
 } from "./components"
 
+// Utility function to format relative time
+function formatRelativeTime(date: Date): string {
+    const now = new Date()
+    const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+    if (diffInSeconds < 60) return 'Just now'
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} mins ago`
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} hours ago`
+    return `${Math.floor(diffInSeconds / 86400)} days ago`
+}
+
 export default function Messages() {
+    const searchParams = useSearchParams()
+    const router = useRouter()
     const [threads, setThreads] = useState<MessageThread[]>([])
     const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
     const [messages, setMessages] = useState<Message[]>([])
@@ -25,52 +42,162 @@ export default function Messages() {
     const [searchQuery, setSearchQuery] = useState("")
     const [isLoadingMessages, setIsLoadingMessages] = useState(false)
     const [isSending, setIsSending] = useState(false)
+    const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
+
+    // Initialize Socket.IO chat
+    const {
+        isConnected,
+        sendMessage: socketSendMessage,
+        startTyping,
+        stopTyping,
+        connectionError,
+        currentUserId: socketCurrentUserId
+    } = useChat({
+        onNewMessage: async (apiMessage) => {
+            console.log('Received new message via Socket.IO:', apiMessage)
+
+            // Get current user ID for proper message transformation
+            const currentUserId = socketCurrentUserId || await getCurrentUserId()
+            console.log('Current user ID:', currentUserId, 'Message sender ID:', apiMessage.sender_id)
+
+            // Skip messages sent by the current user (sender already sees them via optimistic update)
+            if (apiMessage.sender_id === currentUserId) {
+                console.log('Skipping own message from Socket.IO to prevent duplication')
+                return
+            }
+
+            // Only process messages for the currently selected conversation
+            if (apiMessage.conversation_id !== selectedThreadId) {
+                console.log('Message for different conversation, updating thread list only')
+                // Update thread list for other conversations
+                setThreads(prev => {
+                    const updatedThreads = prev.map(thread =>
+                        thread.id === apiMessage.conversation_id
+                            ? {
+                                ...thread,
+                                lastMessage: apiMessage.content,
+                                timestamp: formatRelativeTime(new Date()),
+                                unreadCount: thread.unreadCount + 1
+                            }
+                            : thread
+                    )
+
+                    // Move updated conversation to top
+                    const conversationIndex = updatedThreads.findIndex(t => t.id === apiMessage.conversation_id)
+                    if (conversationIndex > 0) {
+                        const [conversationThread] = updatedThreads.splice(conversationIndex, 1)
+                        updatedThreads.unshift(conversationThread)
+                    }
+
+                    return updatedThreads
+                })
+                return
+            }
+
+            // Transform the incoming message
+            const transformedMessage = transformMessageToUI(apiMessage, currentUserId || undefined)
+
+            // Add message to current conversation (only for recipients, not senders)
+            setMessages(prev => {
+                // Check if message already exists to prevent duplicates
+                const exists = prev.some(msg => msg.id === transformedMessage.id)
+                if (exists) {
+                    console.log('Message already exists, skipping duplicate:', transformedMessage.id)
+                    return prev
+                }
+                console.log('Adding new message from other user to current conversation:', transformedMessage.id)
+
+                // Insert message in correct chronological order based on rawTimestamp
+                const newMessages = [...prev, transformedMessage]
+                return newMessages.sort((a, b) => {
+                    const aTime = a.rawTimestamp ? new Date(a.rawTimestamp).getTime() : new Date().getTime()
+                    const bTime = b.rawTimestamp ? new Date(b.rawTimestamp).getTime() : new Date().getTime()
+                    return aTime - bTime
+                })
+            })
+
+            // Update thread list with new last message and move to top
+            setThreads(prev => {
+                const updatedThreads = prev.map(thread =>
+                    thread.id === apiMessage.conversation_id
+                        ? {
+                            ...thread,
+                            lastMessage: apiMessage.content,
+                            timestamp: formatRelativeTime(new Date()),
+                            unreadCount: thread.id === selectedThreadId ? thread.unreadCount : thread.unreadCount + 1
+                        }
+                        : thread
+                )
+
+                // Find the updated conversation and move it to the top
+                const conversationIndex = updatedThreads.findIndex(t => t.id === apiMessage.conversation_id)
+                if (conversationIndex > 0) {
+                    const [conversationThread] = updatedThreads.splice(conversationIndex, 1)
+                    updatedThreads.unshift(conversationThread)
+                }
+
+                return updatedThreads
+            })
+        },
+        onTyping: (data) => {
+            if (data.conversationId === selectedThreadId) {
+                setTypingUsers(prev => {
+                    const newSet = new Set(prev)
+                    if (data.isTyping) {
+                        newSet.add(data.userId)
+                    } else {
+                        newSet.delete(data.userId)
+                    }
+                    return newSet
+                })
+            }
+        },
+        onMessagesRead: (data) => {
+            if (data.conversationId === selectedThreadId) {
+                setMessages(prev => prev.map(msg => ({
+                    ...msg,
+                    isRead: true
+                })))
+            }
+        }
+    })
+
+    // Store current values in refs to avoid dependency issues
+    const socketConnectionRef = useRef({ isConnected })
+
+    // Update ref when values change
+    useEffect(() => {
+        socketConnectionRef.current = { isConnected }
+    }, [isConnected])
 
     const loadThreads = useCallback(async () => {
         try {
             const threadsData = await getMessageThreads()
             setThreads(threadsData)
-
-            // Auto-select first thread if available
-            if (threadsData.length > 0 && !selectedThreadId) {
-                setSelectedThreadId(threadsData[0].id)
-            }
         } catch (error) {
             console.error('Failed to load threads:', error)
+            // showToast('Failed to load conversations. Please refresh the page.', 'error')
         }
-    }, [selectedThreadId])
+    }, []) // Remove showToast dependency to prevent infinite loops
 
-    const loadMessages = useCallback(async (threadId: string) => {
-        try {
-            setIsLoadingMessages(true)
-            const messagesData = await getMessagesByThreadId(threadId)
-            setMessages(messagesData)
-
-            // Find and set candidate info
-            const thread = threads.find(t => t.id === threadId)
-            if (thread) {
-                const candidate = getCandidateById(thread.candidateId)
-                setSelectedCandidate(candidate || null)
+    // Handle URL parameter for conversation selection
+    useEffect(() => {
+        const conversationId = searchParams.get('conversation')
+        if (conversationId && threads.length > 0) {
+            const threadExists = threads.find(t => t.id === conversationId)
+            if (threadExists) {
+                setSelectedThreadId(conversationId)
             }
-
-            // Mark messages as read when conversation is opened
-            if (thread && thread.unreadCount > 0) {
-                try {
-                    await markMessagesAsRead(threadId)
-                    // Update thread's unread count in local state
-                    setThreads(prev => prev.map(t =>
-                        t.id === threadId ? { ...t, unreadCount: 0 } : t
-                    ))
-                } catch (error) {
-                    console.error('Failed to mark messages as read:', error)
-                }
-            }
-        } catch (error) {
-            console.error('Failed to load messages:', error)
-        } finally {
-            setIsLoadingMessages(false)
         }
-    }, [threads])
+    }, [searchParams, threads])
+
+    // Auto-select first thread if no URL parameter and no thread selected
+    useEffect(() => {
+        const conversationId = searchParams.get('conversation')
+        if (threads.length > 0 && !selectedThreadId && !conversationId) {
+            setSelectedThreadId(threads[0].id)
+        }
+    }, [threads, selectedThreadId, searchParams])
 
     // Load threads on component mount
     useEffect(() => {
@@ -80,26 +207,145 @@ export default function Messages() {
     // Load messages when thread is selected
     useEffect(() => {
         if (selectedThreadId) {
-            loadMessages(selectedThreadId)
+            const loadMessagesForThread = async () => {
+                try {
+                    setIsLoadingMessages(true)
+                    const messagesData = await getMessagesByThreadId(selectedThreadId)
+
+                    // Remove duplicates based on message ID and sort by raw timestamp
+                    const uniqueMessages = messagesData
+                        .filter((message, index, self) =>
+                            index === self.findIndex(m => m.id === message.id)
+                        )
+                        .sort((a, b) => {
+                            // Use rawTimestamp for sorting if available, fallback to parsing timestamp
+                            const aTime = a.rawTimestamp ? new Date(a.rawTimestamp).getTime() : new Date().getTime()
+                            const bTime = b.rawTimestamp ? new Date(b.rawTimestamp).getTime() : new Date().getTime()
+                            return aTime - bTime
+                        })
+
+                    console.log(`Loaded ${messagesData.length} messages, ${uniqueMessages.length} unique for thread:`, selectedThreadId)
+                    console.log('Sample messages with timestamps:', uniqueMessages.slice(0, 3).map(m => ({
+                        id: m.id,
+                        timestamp: m.timestamp,
+                        rawTimestamp: m.rawTimestamp,
+                        content: m.content.substring(0, 20) + '...'
+                    })))
+                    setMessages(uniqueMessages)
+
+                    // Find and set candidate info
+                    setThreads(currentThreads => {
+                        const thread = currentThreads.find(t => t.id === selectedThreadId)
+                        if (thread) {
+                            const candidate = getCandidateById(thread.candidateId)
+                            setSelectedCandidate(candidate || null)
+
+                            // Mark messages as read when conversation is opened
+                            if (thread.unreadCount > 0) {
+                                // Use REST API to mark messages as read
+                                markMessagesAsRead(selectedThreadId).catch(error =>
+                                    console.error('Failed to mark messages as read:', error)
+                                )
+
+                                // Update thread's unread count in local state
+                                return currentThreads.map(t =>
+                                    t.id === selectedThreadId ? { ...t, unreadCount: 0 } : t
+                                )
+                            }
+                        }
+                        return currentThreads
+                    })
+                } catch (error) {
+                    console.error('Failed to load messages:', error)
+                } finally {
+                    setIsLoadingMessages(false)
+                }
+            }
+
+            loadMessagesForThread()
         }
-    }, [selectedThreadId, loadMessages])
+    }, [selectedThreadId]) // Only depend on selectedThreadId
+
+    // Handle typing indicator
+    const handleTyping = useCallback((content: string) => {
+        if (!selectedThreadId) return
+
+        if (content.trim()) {
+            startTyping?.(selectedThreadId)
+        } else {
+            stopTyping?.(selectedThreadId)
+        }
+    }, [selectedThreadId, startTyping, stopTyping])
 
     const handleSendMessage = async (content: string) => {
         if (!selectedThreadId) return
 
         try {
             setIsSending(true)
-            const newMessage = await sendMessage(selectedThreadId, content)
-            setMessages(prev => [...prev, newMessage])
 
-            // Update thread in list
-            setThreads(prev => prev.map(thread =>
-                thread.id === selectedThreadId
-                    ? { ...thread, lastMessage: content, timestamp: 'Just now' }
-                    : thread
-            ))
+            // Send via REST API for persistence first
+            const newMessage = await sendMessage(selectedThreadId, content)
+
+            // Add message to UI immediately for sender (optimistic update)
+            setMessages(prev => {
+                // Check if message already exists to prevent duplicates
+                const exists = prev.some(msg => msg.id === newMessage.id)
+                if (exists) {
+                    console.log('Message already exists in UI, skipping duplicate:', newMessage.id)
+                    return prev
+                }
+                console.log('Adding new message to UI for sender:', newMessage.id, 'timestamp:', newMessage.timestamp, 'raw:', newMessage.rawTimestamp)
+
+                // Insert message in correct chronological order
+                const newMessages = [...prev, newMessage]
+                return newMessages.sort((a, b) => {
+                    const aTime = a.rawTimestamp ? new Date(a.rawTimestamp).getTime() : new Date().getTime()
+                    const bTime = b.rawTimestamp ? new Date(b.rawTimestamp).getTime() : new Date().getTime()
+                    return aTime - bTime
+                })
+            })
+
+            // Update thread in list and move to top
+            setThreads(prev => {
+                const updatedThreads = prev.map(thread =>
+                    thread.id === selectedThreadId
+                        ? {
+                            ...thread,
+                            lastMessage: content,
+                            timestamp: formatRelativeTime(new Date())
+                        }
+                        : thread
+                )
+
+                // Find the updated conversation and move it to the top
+                const conversationIndex = updatedThreads.findIndex(t => t.id === selectedThreadId)
+                if (conversationIndex > 0) {
+                    const [conversationThread] = updatedThreads.splice(conversationIndex, 1)
+                    updatedThreads.unshift(conversationThread)
+                }
+
+                return updatedThreads
+            })
+
+            // Send via Socket.IO for real-time delivery to other users ONLY
+            // Pass the message ID so backend can broadcast the existing message instead of creating a new one
+            // Add small delay to ensure REST API message is saved before broadcasting
+            if (isConnected && socketSendMessage) {
+                setTimeout(() => {
+                    const success = socketSendMessage(selectedThreadId, content, 'text', undefined, newMessage.id)
+                    if (success) {
+                        console.log('Message broadcasted via Socket.IO for real-time delivery to other users, messageId:', newMessage.id)
+                    } else {
+                        console.log('Socket.IO broadcast failed, but REST API succeeded')
+                    }
+                }, 100) // 100ms delay to ensure DB persistence
+            } else {
+                console.log('Socket.IO not connected, message sent via REST API only')
+            }
+
         } catch (error) {
             console.error('Failed to send message:', error)
+            // showToast('Failed to send message. Please try again.', 'error')
         } finally {
             setIsSending(false)
         }
@@ -109,6 +355,12 @@ export default function Messages() {
         if (selectedCandidate) {
             window.open(selectedCandidate.profileUrl, '_blank')
         }
+    }
+
+    const handleThreadSelect = (threadId: string) => {
+        setSelectedThreadId(threadId)
+        // Update URL to include conversation parameter
+        router.push(`/messages?conversation=${threadId}`, { scroll: false })
     }
 
     // Filter threads based on search query
@@ -124,7 +376,18 @@ export default function Messages() {
             <div className="w-96 border-r border-gray-200 flex flex-col bg-white">
                 {/* Header */}
                 <div className="p-4 border-b border-gray-200">
-                    <h1 className="text-xl font-semibold mb-4 text-gray-900">Messages</h1>
+                    <div className="flex items-center justify-between mb-4">
+                        <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
+                        {/* Connection status */}
+                        <div className="flex items-center gap-2">
+                            <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'
+                                }`}></div>
+                            <span className="text-xs text-gray-500">
+                                {isConnected ? 'Connected' : connectionError || 'Disconnected'}
+                            </span>
+
+                        </div>
+                    </div>
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
                         <Input
@@ -144,7 +407,7 @@ export default function Messages() {
                                 key={thread.id}
                                 thread={thread}
                                 isSelected={selectedThreadId === thread.id}
-                                onClick={() => setSelectedThreadId(thread.id)}
+                                onClick={() => handleThreadSelect(thread.id)}
                             />
                         ))
                     ) : (
@@ -173,9 +436,11 @@ export default function Messages() {
                                 messages={messages}
                                 candidate={selectedCandidate}
                                 onViewProfile={handleViewProfile}
+                                typingUsers={typingUsers}
                             />
                             <MessageInput
                                 onSendMessage={handleSendMessage}
+                                onTyping={handleTyping}
                                 isLoading={isSending}
                                 placeholder="Reply to candidate..."
                             />

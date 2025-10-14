@@ -1,11 +1,54 @@
 import { api } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import { MessageThread, Message, Candidate, ApiConversation, ApiMessage } from './types'
 
+// Get current user ID from Supabase session
+export async function getCurrentUserId(): Promise<string | null> {
+    try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session?.access_token) {
+            const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+            // Check for different possible user ID fields
+            const userId = payload.id || payload.sub || payload.userId
+            console.log('🔐 getCurrentUserId - Token payload:', {
+                id: payload.id,
+                sub: payload.sub,
+                userId: payload.userId,
+                extractedUserId: userId
+            })
+            return userId
+        }
+    } catch (error) {
+        console.error('Error getting current user ID:', error)
+    }
+    return null
+}
+
 // Environment flag to switch between mock and real API
-const USE_MOCK_API = true // Set to false when backend is ready
+const USE_MOCK_API = false // Set to false when backend is ready
 
 // Mock data for development
 const mockApiConversations: ApiConversation[] = [
+    {
+        id: '8ec03c31-c317-46a6-970a-168f8a352cfa', // Using your real conversation ID
+        otherUser: {
+            id: '4ffbbc49-d145-4849-aaa6-4c23516ff43b',
+            name: 'Mobile Developer',
+            avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format'
+        },
+        job: {
+            id: 'a7b8c9d0-e1f2-4a5b-4c5d-6e7f8a9b0c1d',
+            title: 'Mobile App Developer - Flutter'
+        },
+        lastMessage: {
+            content: 'Conversation started',
+            created_at: '2025-10-14T11:50:53.133Z',
+            is_read: false
+        },
+        created_at: '2025-10-14T11:50:53.100Z',
+        updated_at: '2025-10-14T11:50:53.100Z',
+        last_message_at: '2025-10-14T11:50:53.098Z'
+    },
     {
         id: '1',
         otherUser: {
@@ -69,6 +112,32 @@ const mockApiConversations: ApiConversation[] = [
 ]
 
 const mockApiMessages: Record<string, ApiMessage[]> = {
+    '8ec03c31-c317-46a6-970a-168f8a352cfa': [
+        {
+            id: 'a6dcf407-d005-407e-9a6c-25ac9c88db90',
+            conversation_id: '8ec03c31-c317-46a6-970a-168f8a352cfa',
+            sender_id: 'fe999c63-8c55-4d1c-8b30-2dbc64d3ae39',
+            message_type: 'system',
+            content: 'Conversation started',
+            file_url: null,
+            is_read: false,
+            read_at: null,
+            created_at: '2025-10-14T11:50:53.133Z',
+            updated_at: '2025-10-14T11:50:53.133Z'
+        },
+        {
+            id: 'msg-2',
+            conversation_id: '8ec03c31-c317-46a6-970a-168f8a352cfa',
+            sender_id: 'employer-1',
+            message_type: 'text',
+            content: 'Hello! I\'m interested in your Flutter development skills for our mobile app project.',
+            file_url: null,
+            is_read: false,
+            read_at: null,
+            created_at: '2025-10-14T12:00:00.000Z',
+            updated_at: '2025-10-14T12:00:00.000Z'
+        }
+    ],
     '1': [
         {
             id: '1-1',
@@ -80,12 +149,7 @@ const mockApiMessages: Record<string, ApiMessage[]> = {
             is_read: true,
             read_at: '2023-10-12T14:00:00Z',
             created_at: '2023-10-12T13:00:00Z',
-            updated_at: '2023-10-12T14:00:00Z',
-            sender: {
-                id: 'employer-1',
-                name: 'Maria Rodriguez',
-                avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face&auto=format'
-            }
+            updated_at: '2023-10-12T14:00:00Z'
         },
         {
             id: '1-2',
@@ -97,12 +161,7 @@ const mockApiMessages: Record<string, ApiMessage[]> = {
             is_read: true,
             read_at: '2023-10-12T14:30:00Z',
             created_at: '2023-10-12T14:00:00Z',
-            updated_at: '2023-10-12T14:30:00Z',
-            sender: {
-                id: '1',
-                name: 'Jan Mayer',
-                avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format'
-            }
+            updated_at: '2023-10-12T14:30:00Z'
         },
         {
             id: '1-3',
@@ -114,12 +173,7 @@ const mockApiMessages: Record<string, ApiMessage[]> = {
             is_read: true,
             read_at: '2023-10-12T15:00:00Z',
             created_at: '2023-10-12T14:45:00Z',
-            updated_at: '2023-10-12T15:00:00Z',
-            sender: {
-                id: 'employer-1',
-                name: 'Maria Rodriguez',
-                avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face&auto=format'
-            }
+            updated_at: '2023-10-12T15:00:00Z'
         },
         {
             id: '1-4',
@@ -131,33 +185,28 @@ const mockApiMessages: Record<string, ApiMessage[]> = {
             is_read: false,
             read_at: null,
             created_at: '2023-10-12T15:30:45Z',
-            updated_at: '2023-10-12T15:30:45Z',
-            sender: {
-                id: '1',
-                name: 'Jan Mayer',
-                avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format'
-            }
+            updated_at: '2023-10-12T15:30:45Z'
         }
     ]
 }
 
 // Utility functions to transform API data to UI format
 function transformConversationToThread(conversation: ApiConversation): MessageThread {
-    const unreadCount = conversation.lastMessage.is_read ? 0 : 1
+    const unreadCount = conversation.lastMessage?.is_read ? 0 : 1
 
     return {
         id: conversation.id,
-        candidateId: conversation.otherUser.id,
-        candidateName: conversation.otherUser.name,
+        candidateId: conversation.otherUser?.id || '',
+        candidateName: conversation.otherUser?.name || 'Unknown User',
         candidateTitle: conversation.job?.title || 'Candidate',
-        candidateAvatar: conversation.otherUser.avatar_url,
-        lastMessage: conversation.lastMessage.content,
-        timestamp: formatTimestamp(conversation.lastMessage.created_at),
+        candidateAvatar: conversation.otherUser?.avatar_url || '',
+        lastMessage: conversation.lastMessage?.content || 'No messages',
+        timestamp: formatTimestamp(conversation.lastMessage?.created_at || new Date().toISOString()),
         unreadCount
     }
 }
 
-function transformMessageToUI(message: ApiMessage, currentUserId: string = 'employer-1'): Message {
+export function transformMessageToUI(message: ApiMessage, currentUserId?: string): Message {
     return {
         id: message.id,
         threadId: message.conversation_id,
@@ -165,22 +214,63 @@ function transformMessageToUI(message: ApiMessage, currentUserId: string = 'empl
         senderType: message.sender_id === currentUserId ? 'employer' : 'candidate',
         content: message.content,
         timestamp: formatTimestamp(message.created_at),
+        rawTimestamp: message.created_at, // Keep raw timestamp for sorting
         isRead: message.is_read
     }
 }
 
 function formatTimestamp(timestamp: string): string {
-    const date = new Date(timestamp)
-    const now = new Date()
-    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60))
+    try {
+        // Handle null, undefined, or empty timestamps
+        if (!timestamp || timestamp === 'null' || timestamp === 'undefined' || timestamp.trim() === '') {
+            console.warn('Invalid timestamp received:', timestamp)
+            return 'Just now'
+        }
 
-    if (diffInHours < 1) {
-        const diffInMins = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
-        return `${diffInMins} mins ago`
-    } else if (diffInHours < 24) {
-        return `${diffInHours} hours ago`
-    } else {
-        return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        // Clean up the timestamp - remove extra characters or normalize format
+        let cleanTimestamp = timestamp.trim()
+
+        // Handle different timestamp formats
+        if (cleanTimestamp.includes('T') && !cleanTimestamp.endsWith('Z') && !cleanTimestamp.includes('+')) {
+            cleanTimestamp += 'Z' // Add Z for UTC if missing
+        }
+
+        const date = new Date(cleanTimestamp)
+
+        // Check if date is valid
+        if (isNaN(date.getTime()) || date.getTime() === 0 || date.getFullYear() < 1990) {
+            console.warn('Invalid date parsed from timestamp:', timestamp, 'parsed as:', date)
+            return 'Just now'
+        }
+
+        const now = new Date()
+        const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000)
+
+        // Handle future dates (might be server/client time mismatch)
+        if (diffInSeconds < 0) {
+            return 'Just now'
+        }
+
+        if (diffInSeconds < 60) {
+            if (diffInSeconds <= 0) return 'Just now'
+            return `${diffInSeconds}s ago`
+        } else if (diffInSeconds < 3600) {
+            const diffInMins = Math.floor(diffInSeconds / 60)
+            return `${diffInMins} min${diffInMins > 1 ? 's' : ''} ago`
+        } else if (diffInSeconds < 86400) {
+            const diffInHours = Math.floor(diffInSeconds / 3600)
+            return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`
+        } else {
+            const diffInDays = Math.floor(diffInSeconds / 86400)
+            if (diffInDays < 7) {
+                return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`
+            } else {
+                return date.toLocaleDateString()
+            }
+        }
+    } catch (error) {
+        console.error('Error formatting timestamp:', error, 'for timestamp:', timestamp)
+        return 'Just now'
     }
 }
 
@@ -189,42 +279,145 @@ export async function getMessageThreads(): Promise<MessageThread[]> {
     try {
         if (USE_MOCK_API) {
             // Mock API simulation
+            console.log('Using mock API for conversations')
             await new Promise(resolve => setTimeout(resolve, 300))
             return mockApiConversations.map(transformConversationToThread)
         } else {
             // Real API call
+            console.log('Fetching conversations from real API...')
             const response = await api.conversations.getAll()
-            return response.data.map(transformConversationToThread)
+            console.log('Conversations API response:', response)
+
+            // Handle both direct array response and wrapped response
+            const conversationsData = response.data || response
+
+            if (!conversationsData || !Array.isArray(conversationsData)) {
+                console.error('Invalid conversations response format:', conversationsData)
+                throw new Error('Invalid API response format')
+            }
+
+            // Sort conversations by last message timestamp (newest first)
+            const sortedConversations = conversationsData.sort((a: ApiConversation, b: ApiConversation) => {
+                const aTime = new Date(a.last_message_at || a.created_at).getTime()
+                const bTime = new Date(b.last_message_at || b.created_at).getTime()
+                return bTime - aTime // Newest first
+            })
+
+            return sortedConversations.map(transformConversationToThread)
         }
     } catch (error) {
         console.error('Failed to get message threads:', error)
-        // Fallback to mock data
-        return mockApiConversations.map(transformConversationToThread)
+        // Don't fallback to mock data in production unless specifically enabled
+        if (!USE_MOCK_API) {
+            console.log('Real API failed, returning empty array')
+            return []
+        }
+        // Fallback to mock data only in mock mode
+        console.log('Falling back to mock data for demo purposes')
+        // Sort mock conversations by last message timestamp (newest first)
+        const sortedMockConversations = [...mockApiConversations].sort((a, b) => {
+            const aTime = new Date(a.last_message_at || a.created_at).getTime()
+            const bTime = new Date(b.last_message_at || b.created_at).getTime()
+            return bTime - aTime // Newest first
+        })
+        return sortedMockConversations.map(transformConversationToThread)
     }
 }
 
 export async function getMessagesByThreadId(threadId: string): Promise<Message[]> {
     try {
+        const currentUserId = await getCurrentUserId()
+
         if (USE_MOCK_API) {
             // Mock API simulation
             await new Promise(resolve => setTimeout(resolve, 200))
             const mockMessages = mockApiMessages[threadId] || []
-            return mockMessages.map(msg => transformMessageToUI(msg))
+
+            // Remove duplicates based on message ID
+            const uniqueMessages = mockMessages.filter((message, index, self) =>
+                index === self.findIndex(m => m.id === message.id)
+            )
+
+            console.log(`Loading messages for thread ${threadId}:`, {
+                totalMessages: mockMessages.length,
+                uniqueMessages: uniqueMessages.length,
+                hasDuplicates: mockMessages.length !== uniqueMessages.length
+            })
+
+            // Sort messages by timestamp before transforming
+            const sortedMessages = uniqueMessages.sort((a, b) =>
+                new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+            )
+            return sortedMessages.map(msg => transformMessageToUI(msg, currentUserId || undefined))
         } else {
             // Real API call
+            console.log(`Fetching messages for conversation: ${threadId}`)
             const response = await api.conversations.getMessages(threadId)
-            return response.data.map((msg: ApiMessage) => transformMessageToUI(msg))
+            console.log('Messages API response:', response)
+
+            // Handle both direct array response and wrapped response
+            const messagesData = response.data || response
+
+            if (!Array.isArray(messagesData)) {
+                console.error('Invalid messages response format:', messagesData)
+                throw new Error('Invalid API response format')
+            }
+
+            // Remove duplicates based on message ID first
+            const uniqueMessages = messagesData.filter((message: ApiMessage, index: number, self: ApiMessage[]) =>
+                index === self.findIndex((m: ApiMessage) => m.id === message.id)
+            )
+
+            console.log(`API messages for thread ${threadId}:`, {
+                totalMessages: messagesData.length,
+                uniqueMessages: uniqueMessages.length,
+                hasDuplicates: messagesData.length !== uniqueMessages.length,
+                sampleTimestamps: uniqueMessages.slice(0, 3).map(m => ({ id: m.id, created_at: m.created_at }))
+            })
+
+            // Sort messages by created_at timestamp before transforming
+            const sortedMessages = uniqueMessages.sort((a: ApiMessage, b: ApiMessage) => {
+                const aTime = new Date(a.created_at).getTime()
+                const bTime = new Date(b.created_at).getTime()
+
+                // Handle invalid timestamps
+                if (isNaN(aTime) && isNaN(bTime)) return 0
+                if (isNaN(aTime)) return 1
+                if (isNaN(bTime)) return -1
+
+                return aTime - bTime
+            })
+
+            return sortedMessages.map((msg: ApiMessage) => transformMessageToUI(msg, currentUserId || undefined))
         }
     } catch (error) {
         console.error('Failed to get messages for thread:', threadId, error)
-        // Fallback to mock data
+        // Don't fallback to mock data in production - show empty array
+        if (!USE_MOCK_API) {
+            return []
+        }
+        // Fallback to mock data only if using mock mode
+        const currentUserId = await getCurrentUserId()
         const mockMessages = mockApiMessages[threadId] || []
-        return mockMessages.map(msg => transformMessageToUI(msg))
+
+        // Remove duplicates based on message ID
+        const uniqueMessages = mockMessages.filter((message, index, self) =>
+            index === self.findIndex(m => m.id === message.id)
+        )
+
+        // Sort messages by timestamp
+        const sortedMessages = uniqueMessages.sort((a, b) =>
+            new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        )
+
+        return sortedMessages.map(msg => transformMessageToUI(msg, currentUserId || undefined))
     }
 }
 
 export async function sendMessage(threadId: string, content: string): Promise<Message> {
     try {
+        const currentUserId = await getCurrentUserId()
+
         if (USE_MOCK_API) {
             // Mock API simulation
             await new Promise(resolve => setTimeout(resolve, 500))
@@ -232,26 +425,26 @@ export async function sendMessage(threadId: string, content: string): Promise<Me
             const newMessage: ApiMessage = {
                 id: `${threadId}-${Date.now()}`,
                 conversation_id: threadId,
-                sender_id: 'employer-1',
+                sender_id: currentUserId || 'unknown-user',
                 message_type: 'text',
                 content,
                 file_url: null,
                 is_read: true,
                 read_at: new Date().toISOString(),
                 created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-                sender: {
-                    id: 'employer-1',
-                    name: 'You',
-                    avatar_url: ''
-                }
+                updated_at: new Date().toISOString()
             }
 
             // Add to mock data
             if (!mockApiMessages[threadId]) {
                 mockApiMessages[threadId] = []
             }
-            mockApiMessages[threadId].push(newMessage)
+
+            // Check for duplicates before adding
+            const exists = mockApiMessages[threadId].some(msg => msg.id === newMessage.id)
+            if (!exists) {
+                mockApiMessages[threadId].push(newMessage)
+            }
 
             // Update conversation's last message
             const conversation = mockApiConversations.find(c => c.id === threadId)
@@ -264,11 +457,15 @@ export async function sendMessage(threadId: string, content: string): Promise<Me
                 conversation.last_message_at = new Date().toISOString()
             }
 
-            return transformMessageToUI(newMessage)
+            return transformMessageToUI(newMessage, currentUserId || undefined)
         } else {
             // Real API call
+            console.log('📤 Sending message via REST API to:', threadId, 'Content:', content.substring(0, 30) + '...')
             const response = await api.conversations.sendMessage(threadId, { content })
-            return transformMessageToUI(response.data)
+            console.log('📤 REST API response:', response)
+            const transformedMessage = transformMessageToUI(response.data, currentUserId || undefined)
+            console.log('📤 Transformed message for UI:', transformedMessage)
+            return transformedMessage
         }
     } catch (error) {
         console.error('Failed to send message:', error)
@@ -301,7 +498,7 @@ export async function markMessagesAsRead(threadId: string): Promise<void> {
 }
 
 export function getCandidateById(candidateId: string): Candidate | undefined {
-    // Find candidate from conversations data
+    // Find candidate from conversations data (both mock and real)
     const conversation = mockApiConversations.find(c => c.otherUser.id === candidateId)
     if (conversation) {
         return {
@@ -312,5 +509,14 @@ export function getCandidateById(candidateId: string): Candidate | undefined {
             profileUrl: `/candidates/${candidateId}`
         }
     }
-    return undefined
+
+    // If not found in mock data, create a basic candidate object
+    // This handles real conversations that come from the API
+    return {
+        id: candidateId,
+        name: 'Unknown User',
+        title: 'Candidate',
+        avatar: '',
+        profileUrl: `/candidates/${candidateId}`
+    }
 }

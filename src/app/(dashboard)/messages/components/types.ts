@@ -31,11 +31,7 @@ export interface ApiMessage {
     read_at: string | null
     created_at: string
     updated_at: string
-    sender: {
-        id: string
-        name: string
-        avatar_url: string
-    }
+    // Note: sender object is not included in the actual API response
 }
 
 // UI Types (for internal component use)
@@ -57,6 +53,7 @@ export interface Message {
     senderType: 'employer' | 'candidate'
     content: string
     timestamp: string
+    rawTimestamp?: string // Keep raw timestamp for sorting
     isRead: boolean
 }
 

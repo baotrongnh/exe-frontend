@@ -7,5 +7,8 @@ export {
     getMessagesByThreadId,
     sendMessage,
     getCandidateById,
-    markMessagesAsRead
+    markMessagesAsRead,
+    transformMessageToUI,
+    getCurrentUserId
 } from './mockApi'
+export { useChat } from '../hooks/useChat'

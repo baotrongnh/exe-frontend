@@ -2,7 +2,8 @@ import axios from 'axios'
 import { supabase } from './supabase'
 
 // Base URL cho API backend
-const API_BASE_URL = 'http://14.169.93.37:3003/api/v1'
+// const API_BASE_URL = 'http://14.169.93.37:3003/api/v1'
+const API_BASE_URL = 'http://localhost:5000/api/v1'
 
 // Tạo axios instance
 const apiClient = axios.create({
@@ -117,13 +118,16 @@ export const api = {
      cvs: {
           // Get all user CVs
           getAll: async () => {
+               console.log("CV loading started...")
                const response = await apiClient.get('/cvs')
+               console.log("CV loading completed!")
                return response.data
           },
 
           // Get CV by ID
           getById: async (id: string | number) => {
                const response = await apiClient.get(`/cvs/${id}`)
+               console.log("CV loading...")
                return response.data
           },
 

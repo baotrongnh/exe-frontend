@@ -23,7 +23,6 @@ export function useCVManagement() {
         try {
             setLoading(true)
             console.log('Loading CVs from API...')
-            console.log('User:', user)
 
             // Check if we have a valid access token
             const token = getAccessToken()
@@ -33,8 +32,17 @@ export function useCVManagement() {
                 throw new Error('No access token available. Please log in again.')
             }
 
-            // Now try with our API client
-            const response = await api.cvs.getAll()
+            // Add timeout to prevent infinite loading
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000)
+            })
+
+            // Race the API call against the timeout
+            const response = await Promise.race([
+                api.cvs.getAll(),
+                timeoutPromise
+            ])
+
             console.log('API Response:', response)
             console.log('Response type:', typeof response)
             console.log('Response keys:', response ? Object.keys(response) : 'null')
@@ -99,15 +107,28 @@ export function useCVManagement() {
                 file_size?: number;
                 fileSize?: number;
             }) => {
-                const previewUrl = await api.cvs.getPreviewUrl(cv.id)
-                return {
-                    id: cv.id,
-                    name: cv.name,
-                    description: cv.description,
-                    uploadDate: new Date(cv.uploaded_at || cv.created_at || cv.uploadDate || Date.now()),
-                    fileName: cv.file_name || cv.fileName,
-                    fileSize: cv.file_size || cv.fileSize,
-                    previewUrl: previewUrl
+                try {
+                    const previewUrl = await api.cvs.getPreviewUrl(cv.id)
+                    return {
+                        id: cv.id,
+                        name: cv.name,
+                        description: cv.description,
+                        uploadDate: new Date(cv.uploaded_at || cv.created_at || cv.uploadDate || Date.now()),
+                        fileName: cv.file_name || cv.fileName,
+                        fileSize: cv.file_size || cv.fileSize,
+                        previewUrl: previewUrl
+                    }
+                } catch (previewError) {
+                    console.warn('Failed to load preview for CV:', cv.id, previewError)
+                    return {
+                        id: cv.id,
+                        name: cv.name,
+                        description: cv.description,
+                        uploadDate: new Date(cv.uploaded_at || cv.created_at || cv.uploadDate || Date.now()),
+                        fileName: cv.file_name || cv.fileName,
+                        fileSize: cv.file_size || cv.fileSize,
+                        previewUrl: null
+                    }
                 }
             }))
             console.log('Processed CVs:', cvs)
@@ -119,22 +140,30 @@ export function useCVManagement() {
 
             // Handle specific authentication errors
             if (errorMessage.includes('No token provided') || errorMessage.includes('403') || errorMessage.includes('No access token')) {
-                if (confirm(`Authentication error: ${errorMessage}. Would you like to log out and log in again?`)) {
-                    handleAuthError()
-                }
+                console.error('Authentication failed, will handle via context')
+                showToast('Authentication failed. Please refresh the page or log in again.', 'error')
+            } else if (errorMessage.includes('timeout')) {
+                showToast('Request timed out. Please check your connection and try again.', 'error')
             } else {
                 showToast(`Failed to load CVs: ${errorMessage}. Please try again.`, 'error')
             }
+            // Set empty list on error to show proper UI
+            setCvList([])
         } finally {
             setLoading(false)
         }
-    }, [user, getAccessToken, handleAuthError, showToast])
+    }, [getAccessToken, showToast])
 
     // Load CVs on component mount
     useEffect(() => {
         // Only load CVs if user is authenticated
         if (user && !authLoading) {
             loadCVs()
+        }
+        // Reset loading state if user becomes null
+        else if (!user && !authLoading) {
+            setLoading(false)
+            setCvList([])
         }
     }, [user, authLoading, loadCVs])
 
