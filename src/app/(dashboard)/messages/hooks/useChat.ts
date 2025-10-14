@@ -67,36 +67,102 @@ export function useChat(options: UseChatOptions = {}) {
                 }
 
                 // Extract user ID from token
+                let userId, payload
                 try {
-                    const payload = JSON.parse(atob(session.access_token.split('.')[1]))
+                    payload = JSON.parse(atob(session.access_token.split('.')[1]))
                     // Backend expects decoded.id, but JWT uses sub, so we need to check both
-                    const userId = payload.id || payload.sub || payload.userId
-                    console.log('🔐 Token payload:', {
+                    userId = payload.id || payload.sub || payload.userId
+                    console.log('🔐 Complete token payload:', payload)
+                    console.log('🔐 Token payload analysis:', {
                         id: payload.id,
                         sub: payload.sub,
                         userId: payload.userId,
                         extractedUserId: userId,
                         aud: payload.aud,
                         exp: payload.exp,
-                        isExpired: payload.exp < Math.floor(Date.now() / 1000)
+                        isExpired: payload.exp < Math.floor(Date.now() / 1000),
+                        // Show all keys in the payload
+                        allKeys: Object.keys(payload)
                     })
                     setCurrentUserId(userId)
+
+                    if (!userId) {
+                        console.error('❌ No user ID found in token - id, sub, and userId are all missing')
+                        setConnectionError('Invalid token - missing user ID')
+                        return
+                    }
                 } catch (e) {
                     console.error('Error parsing token:', e)
                     setConnectionError('Invalid token format')
                     return
                 }                // Initialize socket connection with better configuration
-                const socketInstance = io('http://localhost:5000', {
+                // Determine which server to connect to based on environment and local server availability
+                const isLocalhost = window.location.origin.includes('localhost')
+
+                // First check if local server is available (only if we're on localhost)
+                let socketUrl = 'https://exe201-sgk6.onrender.com' // Default to production
+                let serverMode = 'production'
+
+                if (isLocalhost) {
+                    try {
+                        // Quick test if local server is running
+                        const localTest = await fetch('http://localhost:5000/api/v1/health', {
+                            method: 'GET',
+                            signal: AbortSignal.timeout(2000) // 2 second timeout
+                        })
+                        if (localTest.ok) {
+                            socketUrl = 'http://localhost:5000'
+                            serverMode = 'development'
+                        }
+                    } catch {
+                        console.log('Local server not available, using production server')
+                    }
+                }
+
+                console.log('🔌 Environment detection:', {
+                    origin: window.location.origin,
+                    nodeEnv: process.env.NODE_ENV,
+                    isLocalhost,
+                    serverMode,
+                    socketUrl
+                })
+                console.log('🔌 Connecting to Socket.IO server:', socketUrl, `(${serverMode} mode)`)
+                console.log('🔑 Using token (first 50 chars):', session.access_token.substring(0, 50) + '...')
+                console.log('🔑 Token being sent in multiple ways:', {
+                    auth: { token: session.access_token.substring(0, 30) + '...' },
+                    query: { token: session.access_token.substring(0, 30) + '...' },
+                    headers: { Authorization: `Bearer ${session.access_token.substring(0, 30)}...` }
+                })
+
+                // Test if the token works with regular API calls first
+                try {
+                    const testResponse = await fetch(`${socketUrl.replace('ws://', 'http://').replace('wss://', 'https://')}/api/v1/conversations`, {
+                        headers: {
+                            'Authorization': `Bearer ${session.access_token}`
+                        }
+                    })
+                    console.log('🧪 Token test result:', testResponse.status, testResponse.statusText)
+                    if (testResponse.status === 401 || testResponse.status === 403) {
+                        console.error('🔑 Token authentication failed with regular API - Socket.IO will likely fail too')
+                        setConnectionError('Token authentication failed - please refresh and login again')
+                        return
+                    }
+                } catch (tokenTestError) {
+                    console.warn('🧪 Token test failed (network issue?):', tokenTestError)
+                }
+
+                const socketInstance = io(socketUrl, {
                     auth: {
                         token: session.access_token
                     },
                     autoConnect: true,
-                    timeout: 10000, // 10 second timeout
+                    timeout: serverMode === 'production' ? 20000 : 10000, // Longer timeout for production
                     reconnection: true,
-                    reconnectionAttempts: 5,
+                    reconnectionAttempts: serverMode === 'production' ? 3 : 5, // Fewer attempts for production
                     reconnectionDelay: 1000,
                     reconnectionDelayMax: 5000,
-                    forceNew: true // Force new connection to prevent conflicts
+                    forceNew: true, // Force new connection to prevent conflicts
+                    transports: ['websocket', 'polling'] // Ensure compatibility
                 })
 
                 socketRef.current = socketInstance
@@ -115,19 +181,29 @@ export function useChat(options: UseChatOptions = {}) {
                     console.error('Error details:', {
                         message: error.message,
                         stack: error.stack,
-                        name: error.name
+                        name: error.name,
+                        socketUrl: socketUrl,
+                        tokenPreview: session.access_token.substring(0, 50) + '...'
                     })
                     setIsConnected(false)
                     let errorMessage = 'Connection failed'
 
-                    if (error.message.includes('Authentication') || error.message.includes('Unauthorized')) {
-                        errorMessage = 'Authentication failed - please refresh'
+                    if (error.message.includes('Authentication') || error.message.includes('Unauthorized') || error.message.includes('Invalid') || error.message.includes('token')) {
+                        errorMessage = 'Authentication failed - please refresh and login again'
+                        console.error('🔑 Authentication error details:', {
+                            tokenValid: !!session.access_token,
+                            tokenLength: session.access_token?.length,
+                            userIdFromToken: userId,
+                            isTokenExpired: payload.exp < Math.floor(Date.now() / 1000)
+                        })
                     } else if (error.message.includes('timeout')) {
                         errorMessage = 'Server timeout - retrying...'
                     } else if (error.message.includes('ECONNREFUSED') || error.message.includes('Failed to fetch')) {
                         errorMessage = 'Server offline - check backend'
                     } else if (error.message.includes('xhr poll error')) {
                         errorMessage = 'Network issue - retrying...'
+                    } else if (error.message.includes('CORS')) {
+                        errorMessage = 'CORS policy blocking connection'
                     }
 
                     setConnectionError(errorMessage)

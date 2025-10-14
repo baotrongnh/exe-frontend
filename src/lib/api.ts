@@ -3,7 +3,7 @@ import { supabase } from './supabase'
 
 // Base URL cho API backend
 // const API_BASE_URL = 'http://14.169.93.37:3003/api/v1'
-const API_BASE_URL = 'http://localhost:5000/api/v1'
+const API_BASE_URL = 'https://exe201-sgk6.onrender.com/api/v1'
 
 // Tạo axios instance
 const apiClient = axios.create({
