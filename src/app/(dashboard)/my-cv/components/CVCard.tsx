@@ -1,7 +1,7 @@
 import React from 'react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileText, MoreVertical, Eye, Trash2 } from 'lucide-react'
+import { FileText, MoreVertical, Eye, Trash2, AlertTriangle } from 'lucide-react'
 import type { CV } from './types'
 import { formatDate, formatFileSize } from './utils'
 
@@ -78,7 +78,7 @@ export function CVCard({
             </CardHeader>
 
             {/* PDF Preview */}
-            {cv.previewUrl && (
+            {cv.previewUrl ? (
                 <div className="px-6 pb-4">
                     <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden">
                         <iframe
@@ -87,6 +87,17 @@ export function CVCard({
                             style={{ width: '133%', height: '133%' }}
                             title={`Preview of ${cv.name}`}
                         />
+                    </div>
+                </div>
+            ) : (
+                <div className="px-6 pb-4">
+                    <div className="bg-orange-50 border border-orange-200 rounded-md p-3">
+                        <div className="flex items-center">
+                            <AlertTriangle className="h-4 w-4 text-orange-400 mr-2" />
+                            <p className="text-sm text-orange-700">
+                                {cv.isFileMissing ? 'File missing on server. Please re-upload.' : 'Preview unavailable'}
+                            </p>
+                        </div>
                     </div>
                 </div>
             )}

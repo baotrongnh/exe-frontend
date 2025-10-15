@@ -1,9 +1,10 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog'
-import { FileText, Trash2, Download } from 'lucide-react'
+import { FileText, Trash2, Download, AlertTriangle } from 'lucide-react'
 import { formatDate, formatFileSize } from './utils'
 import { api } from '@/lib/api'
+import { useToast } from '@/components/toast'
 import type { CV } from './types'
 
 interface DetailModalProps {
@@ -19,22 +20,36 @@ export function DetailModal({
     selectedCV,
     onDelete
 }: DetailModalProps) {
+    const { showToast } = useToast()
+    const [isDownloading, setIsDownloading] = useState(false)
+
     if (!selectedCV) return null
 
     const handleDownload = async () => {
         try {
+            setIsDownloading(true)
             const blob = await api.cvs.download(selectedCV.id)
+
+            // Create download link
             const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = selectedCV.fileName || `${selectedCV.name}.pdf`
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
+            const link = document.createElement('a')
+            link.href = url
+            link.download = selectedCV.fileName || `${selectedCV.name}.pdf`
+            document.body.appendChild(link)
+            link.click()
+            document.body.removeChild(link)
             URL.revokeObjectURL(url)
+
+            showToast('CV downloaded successfully!', 'success')
         } catch (error) {
             console.error('Download failed:', error)
-            alert('Failed to download CV. Please try again.')
+            if (error instanceof Error && error.message.includes('not found on server')) {
+                showToast('CV file is missing on server. Please re-upload your CV.', 'error')
+            } else {
+                showToast('Failed to download CV. Please try again.', 'error')
+            }
+        } finally {
+            setIsDownloading(false)
         }
     }
 
@@ -71,7 +86,7 @@ export function DetailModal({
                     </div>
 
                     {/* Full PDF Preview */}
-                    {selectedCV.previewUrl && (
+                    {selectedCV.previewUrl ? (
                         <div className="w-full">
                             <h4 className="text-lg font-semibold mb-3">PDF Preview</h4>
                             <div className="w-full h-[600px] border rounded-lg overflow-hidden bg-gray-50">
@@ -86,10 +101,41 @@ export function DetailModal({
                                     variant="outline"
                                     size="sm"
                                     onClick={handleDownload}
+                                    disabled={isDownloading}
                                 >
                                     <Download className="w-4 h-4 mr-2" />
-                                    Download PDF
+                                    {isDownloading ? 'Downloading...' : 'Download PDF'}
                                 </Button>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="w-full">
+                            <div className="bg-orange-50 border border-orange-200 rounded-md p-4">
+                                <div className="flex items-center">
+                                    <AlertTriangle className="h-5 w-5 text-orange-400 mr-3" />
+                                    <div>
+                                        <p className="text-sm font-medium text-orange-800">
+                                            {selectedCV.isFileMissing ? 'File Missing' : 'Preview Unavailable'}
+                                        </p>
+                                        <p className="text-sm text-orange-700">
+                                            {selectedCV.isFileMissing
+                                                ? 'CV file is missing on server. Please re-upload your CV.'
+                                                : 'Preview could not be loaded.'
+                                            }
+                                        </p>
+                                    </div>
+                                </div>
+                                <div className="mt-3 flex justify-end">
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={handleDownload}
+                                        disabled={isDownloading}
+                                    >
+                                        <Download className="w-4 h-4 mr-2" />
+                                        {isDownloading ? 'Trying...' : 'Try Download'}
+                                    </Button>
+                                </div>
                             </div>
                         </div>
                     )}
