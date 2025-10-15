@@ -2,7 +2,7 @@ import axios from "axios";
 import { supabase } from "./supabase";
 
 // Base URL cho API backend
-const API_BASE_URL = "http://localhost:3000"; // Backend API base URL
+const API_BASE_URL = "http://14.169.93.37:3003"; // Backend API base URL
 
 // Tạo axios instance
 const apiClient = axios.create({
