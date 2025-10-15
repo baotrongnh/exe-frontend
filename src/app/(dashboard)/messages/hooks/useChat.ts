@@ -96,33 +96,13 @@ export function useChat(options: UseChatOptions = {}) {
                     setConnectionError('Invalid token format')
                     return
                 }                // Initialize socket connection with better configuration
-                // Determine which server to connect to based on environment and local server availability
-                const isLocalhost = window.location.origin.includes('localhost')
-
-                // First check if local server is available (only if we're on localhost)
-                let socketUrl = 'https://exe201-sgk6.onrender.com' // Default to production
-                let serverMode = 'production'
-
-                if (isLocalhost) {
-                    try {
-                        // Quick test if local server is running
-                        const localTest = await fetch('http://localhost:5000/api/v1/health', {
-                            method: 'GET',
-                            signal: AbortSignal.timeout(2000) // 2 second timeout
-                        })
-                        if (localTest.ok) {
-                            socketUrl = 'http://localhost:5000'
-                            serverMode = 'development'
-                        }
-                    } catch {
-                        console.log('Local server not available, using production server')
-                    }
-                }
+                // Use the specified chat server
+                const socketUrl = 'http://14.169.93.37:3003' // Chat server URL
+                const serverMode = 'production'
 
                 console.log('🔌 Environment detection:', {
                     origin: window.location.origin,
                     nodeEnv: process.env.NODE_ENV,
-                    isLocalhost,
                     serverMode,
                     socketUrl
                 })
@@ -136,7 +116,7 @@ export function useChat(options: UseChatOptions = {}) {
 
                 // Test if the token works with regular API calls first
                 try {
-                    const testResponse = await fetch(`${socketUrl.replace('ws://', 'http://').replace('wss://', 'https://')}/api/v1/conversations`, {
+                    const testResponse = await fetch(`${socketUrl}/api/conversations`, {
                         headers: {
                             'Authorization': `Bearer ${session.access_token}`
                         }
