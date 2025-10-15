@@ -1,80 +1,184 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import apiClient, { api } from "@/lib/api"
+
+interface JobPost {
+     id: string
+     owner_id: string
+     title: string
+     description: string
+     image_url: string | null
+     job_type: string
+     budget_type: string
+     budget_min: string
+     budget_max: string
+     currency: string
+     experience_level: string
+     deadline: string | null
+     status: string
+     applications_count: number
+     skills_required: string[]
+     rejection_reason: string | null
+     created_at: string
+     updated_at: string
+     category_id: string | null
+}
+
+interface JobPostDisplay {
+     id: string | number
+     title: string
+     company: string
+     companyLogo: string
+     location: string
+     type: string
+     salary: string
+     status: string
+     postedDate: string
+     description: string
+     tags: string[]
+     budget_min: string
+     budget_max: string
+     currency: string
+}
 
 export default function JobApprovalsPage() {
      const [searchQuery, setSearchQuery] = useState("")
      const [selectedTab, setSelectedTab] = useState("pending")
+     const [jobPosts, setJobPosts] = useState<JobPostDisplay[]>([])
+     const [loading, setLoading] = useState(true)
+     const [actionLoading, setActionLoading] = useState<string | null>(null) // Track which job is being processed
 
-     const jobPosts = [
-          {
-               id: 1,
-               title: "Senior Frontend Developer",
-               company: "Stripe",
-               companyLogo: "S",
-               location: "San Francisco, USA",
-               type: "Full-Time",
-               salary: "$120k - $180k",
-               status: "pending",
-               postedDate: "Mar 15, 2024",
-               description: "We're looking for an experienced frontend developer to join our team...",
-               tags: ["React", "TypeScript", "Next.js"],
-          },
-          {
-               id: 2,
-               title: "Product Designer",
-               company: "Figma",
-               companyLogo: "F",
-               location: "Remote",
-               type: "Full-Time",
-               salary: "$100k - $150k",
-               status: "pending",
-               postedDate: "Mar 14, 2024",
-               description: "Join our design team to create beautiful user experiences...",
-               tags: ["UI/UX", "Figma", "Design Systems"],
-          },
-          {
-               id: 3,
-               title: "Backend Engineer",
-               company: "Vercel",
-               companyLogo: "V",
-               location: "Berlin, Germany",
-               type: "Full-Time",
-               salary: "$110k - $160k",
-               status: "pending",
-               postedDate: "Mar 13, 2024",
-               description: "Help us build the infrastructure for the modern web...",
-               tags: ["Node.js", "PostgreSQL", "AWS"],
-          },
-          {
-               id: 4,
-               title: "Marketing Manager",
-               company: "Notion",
-               companyLogo: "N",
-               location: "New York, USA",
-               type: "Full-Time",
-               salary: "$90k - $130k",
-               status: "approved",
-               postedDate: "Mar 10, 2024",
-               description: "Lead our marketing efforts and grow our brand...",
-               tags: ["Marketing", "Strategy", "Content"],
-          },
-          {
-               id: 5,
-               title: "Data Scientist",
-               company: "OpenAI",
-               companyLogo: "O",
-               location: "San Francisco, USA",
-               type: "Full-Time",
-               salary: "$150k - $220k",
-               status: "rejected",
-               postedDate: "Mar 8, 2024",
-               description: "Work on cutting-edge AI and machine learning projects...",
-               tags: ["Python", "ML", "AI"],
-          },
-     ]
+     useEffect(() => {
+          fetchPendingJobs()
+     }, [])
+
+     const transformJobData = (job: JobPost): JobPostDisplay => {
+          // Format salary
+          const salaryMin = parseFloat(job.budget_min).toLocaleString()
+          const salaryMax = parseFloat(job.budget_max).toLocaleString()
+          const salary = `${salaryMin} - ${salaryMax} ${job.currency}`
+
+          // Get company logo (first letter of owner_id for now, or could fetch from employer profile)
+          const companyLogo = job.title.charAt(0).toUpperCase()
+
+          // Format date
+          const postedDate = new Date(job.created_at).toLocaleDateString('en-US', {
+               month: 'short',
+               day: 'numeric',
+               year: 'numeric'
+          })
+
+          return {
+               id: job.id,
+               title: job.title,
+               company: "Company", // TODO: Fetch from employer profile using owner_id
+               companyLogo: companyLogo,
+               location: "Remote", // TODO: Add location field to API
+               type: job.job_type.replace('_', '-'),
+               salary: salary,
+               status: job.status,
+               postedDate: postedDate,
+               description: job.description,
+               tags: job.skills_required,
+               budget_min: job.budget_min,
+               budget_max: job.budget_max,
+               currency: job.currency
+          }
+     }
+
+     const fetchPendingJobs = async () => {
+          try {
+               setLoading(true)
+
+               // Try to fetch from /api/admin/jobs/pending first
+               // If it fails, fallback to /api/jobs and filter by status
+               let response
+               try {
+                    response = await apiClient.get("/api/admin/jobs/pending")
+               } catch (adminError) {
+                    console.log("Admin endpoint failed, using /api/jobs instead")
+                    response = await apiClient.get("/api/jobs")
+               }
+
+               console.log("=== API Response ===")
+               console.log("Full response:", response.data)
+
+               const jobs: JobPost[] = response.data.data || response.data
+               const transformedJobs = jobs.map(transformJobData)
+
+               setJobPosts(transformedJobs)
+          } catch (error) {
+               console.error("Error fetching pending jobs:", error)
+               setJobPosts([])
+          } finally {
+               setLoading(false)
+          }
+     }
+
+     const handleApprove = async (jobId: string | number) => {
+          try {
+               setActionLoading(jobId.toString())
+               console.log("Approving job:", jobId)
+
+               const response = await api.admin.reviewJob(jobId.toString(), "active")
+
+               console.log("Approve response:", response)
+
+               // Update local state - remove from pending or update status
+               setJobPosts(prevJobs =>
+                    prevJobs.map(job =>
+                         job.id === jobId
+                              ? { ...job, status: "active" }
+                              : job
+                    )
+               )
+
+               // Show success message (you can add toast notification here)
+               alert("Job approved successfully!")
+
+               // Refresh the list
+               await fetchPendingJobs()
+          } catch (error) {
+               console.error("Error approving job:", error)
+               alert("Failed to approve job. Please try again.")
+          } finally {
+               setActionLoading(null)
+          }
+     }
+
+     const handleReject = async (jobId: string | number) => {
+          try {
+               setActionLoading(jobId.toString())
+               console.log("Rejecting job:", jobId)
+
+               const response = await api.admin.reviewJob(jobId.toString(), "rejected")
+
+               console.log("Reject response:", response)
+
+               // Update local state
+               setJobPosts(prevJobs =>
+                    prevJobs.map(job =>
+                         job.id === jobId
+                              ? { ...job, status: "rejected" }
+                              : job
+                    )
+               )
+
+               // Show success message
+               alert("Job rejected successfully!")
+
+               // Refresh the list
+               await fetchPendingJobs()
+          } catch (error) {
+               console.error("Error rejecting job:", error)
+               alert("Failed to reject job. Please try again.")
+          } finally {
+               setActionLoading(null)
+          }
+     }
 
      const filteredJobs = jobPosts.filter(
           (job) =>
@@ -87,11 +191,25 @@ export default function JobApprovalsPage() {
      const approvedCount = jobPosts.filter((job) => job.status === "approved").length
      const rejectedCount = jobPosts.filter((job) => job.status === "rejected").length
 
+     if (loading) {
+          return (
+               <div className="p-8 flex items-center justify-center min-h-screen">
+                    <div className="text-center">
+                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+                         <p className="text-gray-600">Loading jobs...</p>
+                    </div>
+               </div>
+          )
+     }
+
      return (
           <div className="p-8">
                <div className="mb-8">
                     <h1 className="text-3xl font-bold text-gray-900">Job Post Approvals</h1>
                     <p className="text-gray-600 mt-1">Review and approve job postings from employers</p>
+                    <Button onClick={fetchPendingJobs} className="mt-4" variant="outline">
+                         Refresh Data
+                    </Button>
                </div>
 
                {/* Stats */}
@@ -145,8 +263,8 @@ export default function JobApprovalsPage() {
                               <button
                                    onClick={() => setSelectedTab("pending")}
                                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${selectedTab === "pending"
-                                             ? "border-indigo-600 text-indigo-600"
-                                             : "border-transparent text-gray-600 hover:text-gray-900"
+                                        ? "border-indigo-600 text-indigo-600"
+                                        : "border-transparent text-gray-600 hover:text-gray-900"
                                         }`}
                               >
                                    Pending ({pendingCount})
@@ -154,8 +272,8 @@ export default function JobApprovalsPage() {
                               <button
                                    onClick={() => setSelectedTab("approved")}
                                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${selectedTab === "approved"
-                                             ? "border-indigo-600 text-indigo-600"
-                                             : "border-transparent text-gray-600 hover:text-gray-900"
+                                        ? "border-indigo-600 text-indigo-600"
+                                        : "border-transparent text-gray-600 hover:text-gray-900"
                                         }`}
                               >
                                    Approved ({approvedCount})
@@ -163,8 +281,8 @@ export default function JobApprovalsPage() {
                               <button
                                    onClick={() => setSelectedTab("rejected")}
                                    className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${selectedTab === "rejected"
-                                             ? "border-indigo-600 text-indigo-600"
-                                             : "border-transparent text-gray-600 hover:text-gray-900"
+                                        ? "border-indigo-600 text-indigo-600"
+                                        : "border-transparent text-gray-600 hover:text-gray-900"
                                         }`}
                               >
                                    Rejected ({rejectedCount})
@@ -224,12 +342,20 @@ export default function JobApprovalsPage() {
                                         <div className="flex flex-col items-end gap-2">
                                              {job.status === "pending" && (
                                                   <>
-                                                       <Button className="bg-green-600 hover:bg-green-700 text-white w-32">Approve</Button>
+                                                       <Button
+                                                            className="bg-green-600 hover:bg-green-700 text-white w-32"
+                                                            onClick={() => handleApprove(job.id)}
+                                                            disabled={actionLoading === job.id.toString()}
+                                                       >
+                                                            {actionLoading === job.id.toString() ? "Processing..." : "Approve"}
+                                                       </Button>
                                                        <Button
                                                             variant="outline"
                                                             className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent w-32"
+                                                            onClick={() => handleReject(job.id)}
+                                                            disabled={actionLoading === job.id.toString()}
                                                        >
-                                                            Reject
+                                                            {actionLoading === job.id.toString() ? "Processing..." : "Reject"}
                                                        </Button>
                                                        <Button variant="outline" className="bg-transparent w-32">
                                                             View Details
