@@ -2,70 +2,115 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
+import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
+import { api } from "@/lib/api"
 
 export function EmployerSidebar() {
      const pathname = usePathname()
      const router = useRouter()
+     const [unreadCount, setUnreadCount] = useState(0)
+
+     // Fetch unread message count
+     useEffect(() => {
+          const fetchUnreadCount = async () => {
+               try {
+                    const response = await api.conversations.getUnreadCount()
+                    if (response.success) {
+                         setUnreadCount(response.data.count)
+                    }
+               } catch (error) {
+                    console.error("Error fetching unread count:", error)
+                    setUnreadCount(0)
+               }
+          }
+
+          fetchUnreadCount()
+
+          // Fetch unread count every 30 seconds
+          const interval = setInterval(fetchUnreadCount, 30000)
+
+          return () => clearInterval(interval)
+     }, [])
 
      const handleLogout = () => {
           localStorage.removeItem("employerAuth")
           router.push("/employer/login")
      }
 
-     const navItems = [
-          {
-               title: "Dashboard",
-               href: "/employer/dashboard",
-               icon: (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-                         />
-                    </svg>
-               ),
-          },
-          {
-               title: "Applications",
-               href: "/employer/applications",
-               icon: (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                         />
-                    </svg>
-               ),
-          },
-          {
-               title: "My Jobs",
-               href: "/employer/jobs",
-               icon: (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                              strokeWidth={2}
-                              d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
-                         />
-                    </svg>
-               ),
-          },
-          {
-               title: "Post a Job",
-               href: "/employer/post-job",
-               icon: (
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                    </svg>
-               ),
-          },
-     ]
+     const navItems: Array<{
+          title: string
+          href: string
+          badge?: number
+          icon: React.ReactNode
+     }> = [
+               {
+                    title: "Dashboard",
+                    href: "/employer/dashboard",
+                    icon: (
+                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path
+                                   strokeLinecap="round"
+                                   strokeLinejoin="round"
+                                   strokeWidth={2}
+                                   d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
+                              />
+                         </svg>
+                    ),
+               },
+               {
+                    title: "Messages",
+                    href: "/messages",
+                    badge: unreadCount > 0 ? unreadCount : undefined,
+                    icon: (
+                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path
+                                   strokeLinecap="round"
+                                   strokeLinejoin="round"
+                                   strokeWidth={2}
+                                   d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                              />
+                         </svg>
+                    ),
+               },
+               {
+                    title: "Applications",
+                    href: "/employer/applications",
+                    icon: (
+                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path
+                                   strokeLinecap="round"
+                                   strokeLinejoin="round"
+                                   strokeWidth={2}
+                                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                         </svg>
+                    ),
+               },
+               {
+                    title: "My Jobs",
+                    href: "/employer/jobs",
+                    icon: (
+                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path
+                                   strokeLinecap="round"
+                                   strokeLinejoin="round"
+                                   strokeWidth={2}
+                                   d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"
+                              />
+                         </svg>
+                    ),
+               },
+               {
+                    title: "Post a Job",
+                    href: "/employer/post-job",
+                    icon: (
+                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                         </svg>
+                    ),
+               },
+          ]
 
      return (
           <div className="w-64 bg-white border-r border-gray-200 min-h-screen flex flex-col">
@@ -104,7 +149,12 @@ export function EmployerSidebar() {
                                         )}
                                    >
                                         {item.icon}
-                                        {item.title}
+                                        <span className="flex-1">{item.title}</span>
+                                        {item.badge && (
+                                             <span className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-red-500 rounded-full">
+                                                  {item.badge}
+                                             </span>
+                                        )}
                                    </Link>
                               )
                          })}

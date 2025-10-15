@@ -211,9 +211,12 @@ export default function Messages() {
         loadThreads()
     }, [loadThreads])
 
+    // Track last loaded thread to prevent unnecessary reloads
+    const lastLoadedThreadRef = useRef<string | null>(null)
+
     // Load messages when thread is selected
     useEffect(() => {
-        if (selectedThreadId) {
+        if (selectedThreadId && selectedThreadId !== lastLoadedThreadRef.current) {
             const loadMessagesForThread = async () => {
                 try {
                     setIsLoadingMessages(true)
@@ -232,13 +235,8 @@ export default function Messages() {
                         })
 
                     console.log(`Loaded ${messagesData.length} messages, ${uniqueMessages.length} unique for thread:`, selectedThreadId)
-                    console.log('Sample messages with timestamps:', uniqueMessages.slice(0, 3).map(m => ({
-                        id: m.id,
-                        timestamp: m.timestamp,
-                        rawTimestamp: m.rawTimestamp,
-                        content: m.content.substring(0, 20) + '...'
-                    })))
                     setMessages(uniqueMessages)
+                    lastLoadedThreadRef.current = selectedThreadId
 
                     // Find and set candidate info
                     const thread = threads.find(t => t.id === selectedThreadId)
@@ -273,7 +271,7 @@ export default function Messages() {
 
             loadMessagesForThread()
         }
-    }, [selectedThreadId, threads]) // Include threads dependency
+    }, [selectedThreadId, threads])
 
     // Handle typing indicator
     const handleTyping = useCallback((content: string) => {
@@ -303,7 +301,7 @@ export default function Messages() {
                     console.log('Message already exists in UI, skipping duplicate:', newMessage.id)
                     return prev
                 }
-                console.log('Adding new message to UI for sender:', newMessage.id, 'timestamp:', newMessage.timestamp, 'raw:', newMessage.rawTimestamp)
+                console.log('Adding new message to UI for sender:', newMessage.id, 'timestamp:', newMessage.timestamp)
 
                 // Insert message in correct chronological order
                 const newMessages = [...prev, newMessage]
@@ -382,9 +380,9 @@ export default function Messages() {
     )
 
     return (
-        <div className="h-full flex bg-white">
+        <div className="h-full flex bg-white overflow-hidden">
             {/* Left sidebar - Message threads */}
-            <div className="w-96 border-r border-gray-200 flex flex-col bg-white">
+            <div className="w-96 border-r border-gray-200 flex flex-col bg-white flex-shrink-0">
                 {/* Header */}
                 <div className="p-4 border-b border-gray-200">
                     <div className="flex items-center justify-between mb-4">
@@ -432,7 +430,7 @@ export default function Messages() {
             </div>
 
             {/* Right side - Conversation view */}
-            <div className="flex-1 flex flex-col">
+            <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
                 {selectedThreadId && selectedCandidate ? (
                     isLoadingMessages ? (
                         <div className="flex-1 flex items-center justify-center bg-gray-50">
@@ -446,8 +444,10 @@ export default function Messages() {
                             <ConversationView
                                 messages={messages}
                                 candidate={selectedCandidate}
+                                threadId={selectedThreadId || ''}
                                 onViewProfile={handleViewProfile}
                                 typingUsers={typingUsers}
+                                isSending={isSending}
                             />
                             <MessageInput
                                 onSendMessage={handleSendMessage}
