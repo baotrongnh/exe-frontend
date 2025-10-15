@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { AxiosError } from 'axios'
 import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/toast'
@@ -120,6 +121,17 @@ export function useCVManagement() {
                     }
                 } catch (previewError) {
                     console.warn('Failed to load preview for CV:', cv.id, previewError)
+
+                    // Check if it's a missing file error
+                    let isFileMissing = false
+                    if (previewError instanceof Error && 'response' in previewError) {
+                        const axiosError = previewError as AxiosError
+                        if (axiosError.response?.status === 500) {
+                            isFileMissing = true
+                            console.warn(`CV file ${cv.id} appears to be missing on server`)
+                        }
+                    }
+
                     return {
                         id: cv.id,
                         name: cv.name,
@@ -127,7 +139,8 @@ export function useCVManagement() {
                         uploadDate: new Date(cv.uploaded_at || cv.created_at || cv.uploadDate || Date.now()),
                         fileName: cv.file_name || cv.fileName,
                         fileSize: cv.file_size || cv.fileSize,
-                        previewUrl: null
+                        previewUrl: null,
+                        isFileMissing
                     }
                 }
             }))
@@ -180,16 +193,32 @@ export function useCVManagement() {
 
     const uploadCV = async (data: { name: string; description: string; file: File }) => {
         try {
+            console.log('useCVManagement: Starting upload process...')
+            console.log('Upload data:', {
+                name: data.name,
+                description: data.description,
+                fileName: data.file.name,
+                fileSize: data.file.size,
+                fileType: data.file.type
+            })
+
             setUploadLoading(true)
-            await api.cvs.upload({
+
+            const result = await api.cvs.upload({
                 cv: data.file,
                 name: data.name.trim(),
                 description: data.description.trim()
             })
+
+            console.log('Upload API response:', result)
+
             // Reload CVs
+            console.log('Reloading CVs after upload...')
             await loadCVs()
+
+            console.log('Upload process completed successfully!')
         } catch (error) {
-            console.error('Error uploading CV:', error)
+            console.error('Error uploading CV in useCVManagement:', error)
             throw error
         } finally {
             setUploadLoading(false)

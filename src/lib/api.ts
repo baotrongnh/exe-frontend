@@ -1,11 +1,11 @@
-import axios from 'axios'
+import axios, { AxiosError } from 'axios'
 import { supabase } from './supabase'
 
 // Base URL cho API backend
-// const API_BASE_URL = 'http://14.169.93.37:3003/api/v1'
 const API_BASE_URL = 'https://exe201-sgk6.onrender.com/api/v1'
+const CV_API_BASE_URL = 'http://14.169.93.37:3003/api/v1'
 
-// Tạo axios instance
+// Tạo axios instance cho general API
 const apiClient = axios.create({
      baseURL: API_BASE_URL,
      headers: {
@@ -13,7 +13,15 @@ const apiClient = axios.create({
      },
 })
 
-// Interceptor để tự động thêm access token vào header
+// Tạo axios instance riêng cho CV API
+const cvApiClient = axios.create({
+     baseURL: CV_API_BASE_URL,
+     headers: {
+          'Content-Type': 'application/json',
+     },
+})
+
+// Interceptor để tự động thêm access token vào header cho general API
 apiClient.interceptors.request.use(
      async (config) => {
           try {
@@ -44,7 +52,37 @@ apiClient.interceptors.request.use(
      }
 )
 
-// Interceptor để xử lý response errors
+// Interceptor để tự động thêm access token vào header cho CV API
+cvApiClient.interceptors.request.use(
+     async (config) => {
+          try {
+               const { data: { session } } = await supabase.auth.getSession()
+               console.log('CV API Session check:', {
+                    hasSession: !!session,
+                    hasAccessToken: !!session?.access_token,
+                    tokenPreview: session?.access_token ? session.access_token.substring(0, 20) + '...' : 'none'
+               })
+
+               if (session?.access_token) {
+                    config.headers.Authorization = `Bearer ${session.access_token}`
+                    console.log('Adding auth token to CV API request:', config.url, 'Token length:', session.access_token.length)
+               } else {
+                    console.warn('No auth token available for CV API request:', config.url)
+                    console.warn('User might not be authenticated for CV API')
+               }
+          } catch (error) {
+               console.error('Error getting session for CV API:', error)
+          }
+
+          return config
+     },
+     (error) => {
+          console.error('CV API Request interceptor error:', error)
+          return Promise.reject(error)
+     }
+)
+
+// Interceptor để xử lý response errors cho general API
 apiClient.interceptors.response.use(
      (response) => {
           console.log('API Response successful:', response.config.url, response.status)
@@ -68,6 +106,34 @@ apiClient.interceptors.response.use(
                     console.error('No token was sent with the request')
                }
                // Có thể redirect đến trang login tại đây nếu cần
+          }
+          return Promise.reject(error)
+     }
+)
+
+// Interceptor để xử lý response errors cho CV API
+cvApiClient.interceptors.response.use(
+     (response) => {
+          console.log('CV API Response successful:', response.config.url, response.status)
+          return response
+     },
+     (error) => {
+          console.error('CV API Error:', {
+               url: error.config?.url,
+               method: error.config?.method,
+               status: error.response?.status,
+               statusText: error.response?.statusText,
+               data: error.response?.data,
+               message: error.message
+          })
+
+          if (error.response?.status === 401 || error.response?.status === 403) {
+               // Token hết hạn hoặc không hợp lệ
+               console.error('CV API Authentication failed - token invalid or missing')
+               // Check if it's specifically a "No token provided" error
+               if (error.response?.data?.message === "No token provided!") {
+                    console.error('No token was sent with the CV API request')
+               }
           }
           return Promise.reject(error)
      }
@@ -118,32 +184,83 @@ export const api = {
      cvs: {
           // Get all user CVs
           getAll: async () => {
-               console.log("CV loading started...")
-               const response = await apiClient.get('/cvs')
-               console.log("CV loading completed!")
-               return response.data
+               try {
+                    console.log("CV loading started...")
+                    const response = await cvApiClient.get('/cvs')
+                    console.log("CV loading completed!")
+                    return response.data
+               } catch (error) {
+                    console.error('Error loading CVs:', error)
+                    // Return empty array or handle gracefully
+                    if (error instanceof Error && 'response' in error) {
+                         const axiosError = error as AxiosError
+                         if (axiosError.response?.status === 500) {
+                              console.warn('Server error loading CVs - some files may be missing')
+                              return { data: [], message: 'Some CVs may be unavailable due to server issues' }
+                         }
+                    }
+                    throw error
+               }
           },
 
           // Get CV by ID
           getById: async (id: string | number) => {
-               const response = await apiClient.get(`/cvs/${id}`)
-               console.log("CV loading...")
-               return response.data
+               try {
+                    const response = await cvApiClient.get(`/cvs/${id}`)
+                    console.log("CV loading...")
+                    return response.data
+               } catch (error) {
+                    console.error('Error loading CV:', error)
+                    if (error instanceof Error && 'response' in error) {
+                         const axiosError = error as AxiosError
+                         if (axiosError.response?.status === 500) {
+                              console.warn(`CV ${id} file may be missing on server`)
+                         }
+                    }
+                    throw error
+               }
           },
 
           // Upload new CV
           upload: async (cvData: { cv: File; name: string; description: string }) => {
+               console.log('API: Starting CV upload...')
+               console.log('Upload data:', {
+                    fileName: cvData.cv.name,
+                    fileSize: cvData.cv.size,
+                    fileType: cvData.cv.type,
+                    name: cvData.name,
+                    description: cvData.description
+               })
+
                const formData = new FormData()
                formData.append('cv', cvData.cv)
                formData.append('name', cvData.name)
                formData.append('description', cvData.description)
 
-               const response = await apiClient.post('/cvs', formData, {
-                    headers: {
-                         'Content-Type': 'multipart/form-data',
-                    },
-               })
-               return response.data
+               console.log('FormData entries:')
+               for (const [key, value] of formData.entries()) {
+                    console.log(key, value instanceof File ? `File: ${value.name}` : value)
+               }
+
+               try {
+                    console.log('Sending upload request to:', '/cvs')
+                    const response = await cvApiClient.post('/cvs', formData, {
+                         headers: {
+                              'Content-Type': 'multipart/form-data',
+                         },
+                    })
+
+                    console.log('Upload response:', response.data)
+                    return response.data
+               } catch (error) {
+                    console.error('Upload API error:', error)
+                    if (error instanceof Error && 'response' in error) {
+                         const axiosError = error as AxiosError
+                         console.error('Error response:', axiosError.response?.data)
+                         console.error('Error status:', axiosError.response?.status)
+                    }
+                    throw error
+               }
           },
 
           // Update CV (edit name, description, or replace file)
@@ -160,7 +277,7 @@ export const api = {
                     formData.append('description', cvData.description)
                }
 
-               const response = await apiClient.patch(`/cvs/${id}`, formData, {
+               const response = await cvApiClient.patch(`/cvs/${id}`, formData, {
                     headers: {
                          'Content-Type': 'multipart/form-data',
                     },
@@ -170,34 +287,51 @@ export const api = {
 
           // Delete CV
           delete: async (id: string | number) => {
-               const response = await apiClient.delete(`/cvs/${id}`)
+               const response = await cvApiClient.delete(`/cvs/${id}`)
                return response.data
           },
 
           // Download CV
           download: async (id: string | number) => {
-               const response = await apiClient.get(`/cvs/${id}/download`, {
-                    responseType: 'blob',
-               })
-               return response.data
+               try {
+                    const response = await cvApiClient.get(`/cvs/${id}/download`, {
+                         responseType: 'blob',
+                    })
+                    return response.data
+               } catch (error) {
+                    console.error('Error downloading CV:', error)
+                    if (error instanceof Error && 'response' in error) {
+                         const axiosError = error as AxiosError
+                         if (axiosError.response?.status === 500) {
+                              throw new Error('CV file not found on server. Please re-upload your CV.')
+                         }
+                    }
+                    throw error
+               }
           },
 
           // Get CV preview URL with authentication
           getPreviewUrl: async (id: string | number) => {
                try {
-                    const blob = await apiClient.get(`/cvs/${id}/download`, {
+                    const blob = await cvApiClient.get(`/cvs/${id}/download`, {
                          responseType: 'blob',
                     })
                     return URL.createObjectURL(blob.data)
                } catch (error) {
                     console.error('Error creating preview URL:', error)
+                    if (error instanceof Error && 'response' in error) {
+                         const axiosError = error as AxiosError
+                         if (axiosError.response?.status === 500) {
+                              console.warn(`CV file ${id} not found on server`)
+                         }
+                    }
                     return null
                }
           },
 
           // Get direct API URL (for reference only, requires auth header)
           getDirectUrl: (id: string | number) => {
-               return `${API_BASE_URL}/cvs/${id}/download`
+               return `${CV_API_BASE_URL}/cvs/${id}/download`
           },
      },
 

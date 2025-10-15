@@ -7,4 +7,5 @@ export interface CV {
     previewUrl?: string | null
     fileName?: string
     fileSize?: number
+    isFileMissing?: boolean
 }
