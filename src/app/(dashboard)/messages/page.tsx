@@ -143,10 +143,13 @@ export default function Messages() {
             if (data.conversationId === selectedThreadId) {
                 setTypingUsers(prev => {
                     const newSet = new Set(prev)
-                    if (data.isTyping) {
-                        newSet.add(data.userId)
-                    } else {
-                        newSet.delete(data.userId)
+                    // Don't show typing indicator for the current user
+                    if (data.userId !== socketCurrentUserId) {
+                        if (data.isTyping) {
+                            newSet.add(data.userId)
+                        } else {
+                            newSet.delete(data.userId)
+                        }
                     }
                     return newSet
                 })
@@ -187,6 +190,8 @@ export default function Messages() {
             const threadExists = threads.find(t => t.id === conversationId)
             if (threadExists) {
                 setSelectedThreadId(conversationId)
+                // Clear typing indicators when switching conversations
+                setTypingUsers(new Set())
             }
         }
     }, [searchParams, threads])
@@ -196,6 +201,8 @@ export default function Messages() {
         const conversationId = searchParams.get('conversation')
         if (threads.length > 0 && !selectedThreadId && !conversationId) {
             setSelectedThreadId(threads[0].id)
+            // Clear typing indicators when auto-selecting conversation
+            setTypingUsers(new Set())
         }
     }, [threads, selectedThreadId, searchParams])
 
@@ -234,27 +241,29 @@ export default function Messages() {
                     setMessages(uniqueMessages)
 
                     // Find and set candidate info
-                    setThreads(currentThreads => {
-                        const thread = currentThreads.find(t => t.id === selectedThreadId)
-                        if (thread) {
-                            const candidate = getCandidateById(thread.candidateId)
+                    const thread = threads.find(t => t.id === selectedThreadId)
+                    if (thread) {
+                        try {
+                            const candidate = await getCandidateById(thread.candidateId)
                             setSelectedCandidate(candidate || null)
-
-                            // Mark messages as read when conversation is opened
-                            if (thread.unreadCount > 0) {
-                                // Use REST API to mark messages as read
-                                markMessagesAsRead(selectedThreadId).catch(error =>
-                                    console.error('Failed to mark messages as read:', error)
-                                )
-
-                                // Update thread's unread count in local state
-                                return currentThreads.map(t =>
-                                    t.id === selectedThreadId ? { ...t, unreadCount: 0 } : t
-                                )
-                            }
+                        } catch (error) {
+                            console.error('Failed to get candidate info:', error)
+                            setSelectedCandidate(null)
                         }
-                        return currentThreads
-                    })
+
+                        // Mark messages as read when conversation is opened
+                        if (thread.unreadCount > 0) {
+                            // Use REST API to mark messages as read
+                            markMessagesAsRead(selectedThreadId).catch(error =>
+                                console.error('Failed to mark messages as read:', error)
+                            )
+
+                            // Update thread's unread count in local state
+                            setThreads(currentThreads => currentThreads.map(t =>
+                                t.id === selectedThreadId ? { ...t, unreadCount: 0 } : t
+                            ))
+                        }
+                    }
                 } catch (error) {
                     console.error('Failed to load messages:', error)
                 } finally {
@@ -264,7 +273,7 @@ export default function Messages() {
 
             loadMessagesForThread()
         }
-    }, [selectedThreadId]) // Only depend on selectedThreadId
+    }, [selectedThreadId, threads]) // Include threads dependency
 
     // Handle typing indicator
     const handleTyping = useCallback((content: string) => {
@@ -359,6 +368,8 @@ export default function Messages() {
 
     const handleThreadSelect = (threadId: string) => {
         setSelectedThreadId(threadId)
+        // Clear typing indicators when switching conversations
+        setTypingUsers(new Set())
         // Update URL to include conversation parameter
         router.push(`/messages?conversation=${threadId}`, { scroll: false })
     }

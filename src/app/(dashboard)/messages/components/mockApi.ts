@@ -2,6 +2,45 @@ import { api } from '@/lib/api'
 import { supabase } from '@/lib/supabase'
 import { MessageThread, Message, Candidate, ApiConversation, ApiMessage } from './types'
 
+// Mock users data for fallback when APIs are unavailable
+const mockUsers = new Map([
+    ['970ac06d-3762-4ba3-aa8d-c95637a49fc4', {
+        id: '970ac06d-3762-4ba3-aa8d-c95637a49fc4',
+        name: 'John Doe',
+        email: 'john.doe@example.com',
+        avatar_url: null
+    }],
+    ['4ffbbc49-d145-4849-aaa6-4c23516ff43b', {
+        id: '4ffbbc49-d145-4849-aaa6-4c23516ff43b',
+        name: 'Jane Smith',
+        email: 'jane.smith@example.com',
+        avatar_url: null
+    }],
+    // Add more mock users as needed
+])
+
+// Array of friendly names to use for generated user names
+const friendlyNames = [
+    'Alex Johnson', 'Maria Garcia', 'David Chen', 'Sarah Wilson', 'Michael Brown',
+    'Jennifer Lee', 'Robert Taylor', 'Amanda Davis', 'Christopher Miller', 'Lisa Anderson',
+    'Matthew Jones', 'Emily Rodriguez', 'Daniel Martinez', 'Ashley Thompson', 'James White',
+    'Jessica Lopez', 'William Harris', 'Rachel Clark', 'Benjamin Lewis', 'Lauren Walker'
+]
+
+// Generate friendly user names from UUIDs
+const generateFriendlyUserName = (userId: string): string => {
+    // Extract parts of the UUID to create a readable name
+    const parts = userId.split('-')
+    const firstPart = parts[0]?.substring(0, 4) || 'user'
+    const lastPart = parts[parts.length - 1]?.substring(0, 4) || '0000'
+
+    // Simple hash to generate consistent names
+    const hash = Array.from(firstPart + lastPart).reduce((acc, char) => acc + char.charCodeAt(0), 0)
+    const nameIndex = hash % friendlyNames.length
+
+    return `${friendlyNames[nameIndex]} (${firstPart})`
+}
+
 // Get current user ID from Supabase session
 export async function getCurrentUserId(): Promise<string | null> {
     try {
@@ -122,8 +161,8 @@ const mockApiMessages: Record<string, ApiMessage[]> = {
             file_url: null,
             is_read: false,
             read_at: null,
-            created_at: '2025-10-14T11:50:53.133Z',
-            updated_at: '2025-10-14T11:50:53.133Z'
+            created_at: '2025-10-13T11:50:53.133Z', // Yesterday
+            updated_at: '2025-10-13T11:50:53.133Z'
         },
         {
             id: 'msg-2',
@@ -134,8 +173,44 @@ const mockApiMessages: Record<string, ApiMessage[]> = {
             file_url: null,
             is_read: false,
             read_at: null,
-            created_at: '2025-10-14T12:00:00.000Z',
-            updated_at: '2025-10-14T12:00:00.000Z'
+            created_at: '2025-10-13T12:00:00.000Z', // Yesterday
+            updated_at: '2025-10-13T12:00:00.000Z'
+        },
+        {
+            id: 'msg-3',
+            conversation_id: '8ec03c31-c317-46a6-970a-168f8a352cfa',
+            sender_id: 'fe999c63-8c55-4d1c-8b30-2dbc64d3ae39',
+            message_type: 'text',
+            content: 'Hi! Yes, I have extensive experience with Flutter and would love to discuss this opportunity.',
+            file_url: null,
+            is_read: false,
+            read_at: null,
+            created_at: '2025-10-13T14:30:00.000Z', // Yesterday
+            updated_at: '2025-10-13T14:30:00.000Z'
+        },
+        {
+            id: 'msg-4',
+            conversation_id: '8ec03c31-c317-46a6-970a-168f8a352cfa',
+            sender_id: 'employer-1',
+            message_type: 'text',
+            content: 'Great! Can you tell me about your recent Flutter projects?',
+            file_url: null,
+            is_read: false,
+            read_at: null,
+            created_at: '2025-10-15T09:15:00.000Z', // Today
+            updated_at: '2025-10-15T09:15:00.000Z'
+        },
+        {
+            id: 'msg-5',
+            conversation_id: '8ec03c31-c317-46a6-970a-168f8a352cfa',
+            sender_id: 'fe999c63-8c55-4d1c-8b30-2dbc64d3ae39',
+            message_type: 'text',
+            content: 'Sure! I recently completed a cross-platform e-commerce app and a fitness tracking application.',
+            file_url: null,
+            is_read: false,
+            read_at: null,
+            created_at: '2025-10-15T10:25:00.000Z', // Today
+            updated_at: '2025-10-15T10:25:00.000Z'
         }
     ],
     '1': [
@@ -203,6 +278,179 @@ function transformConversationToThread(conversation: ApiConversation): MessageTh
         lastMessage: conversation.lastMessage?.content || 'No messages',
         timestamp: formatTimestamp(conversation.lastMessage?.created_at || new Date().toISOString()),
         unreadCount
+    }
+}
+
+// Enhanced transformation function that can accept user data
+async function transformConversationToThreadWithUserData(conversation: ApiConversation, userData?: {
+    id: string
+    name: string
+    email: string
+    avatar_url: string | null
+}): Promise<MessageThread> {
+    const unreadCount = conversation.lastMessage?.is_read ? 0 : 1
+
+    // Get user name from various sources
+    let userName = 'Unknown User'
+    let userAvatar = ''
+
+    console.log('Transform conversation:', conversation.id)
+    console.log('Original otherUser:', conversation.otherUser)
+    console.log('Enhanced userData:', userData)
+
+    // Priority order for user name:
+    // 1. Enhanced userData from Supabase (if available)
+    // 2. otherUser.name from conversation API
+    // 3. Generate name from otherUser.id (if available)
+    // 4. Fallback to "Unknown User"
+
+    if (userData?.name) {
+        userName = userData.name
+        console.log('Using enhanced user name:', userName)
+    } else if (conversation.otherUser?.name) {
+        userName = conversation.otherUser.name
+        console.log('Using conversation API name:', userName)
+    } else if (conversation.otherUser?.id) {
+        // Generate a more meaningful name from the user ID
+        const userId = conversation.otherUser.id
+        if (userId.includes('@')) {
+            // If it looks like an email, use the part before @
+            userName = userId.split('@')[0]
+        } else {
+            // Use first 8 characters of the ID for a more user-friendly display
+            userName = `User ${userId.substring(0, 8)}`
+        }
+        console.log('Generated user name from ID:', userName)
+    }
+
+    // Handle avatar
+    if (userData?.avatar_url) {
+        userAvatar = userData.avatar_url
+    } else if (conversation.otherUser?.avatar_url) {
+        userAvatar = conversation.otherUser.avatar_url
+    }
+
+    console.log('Final user name:', userName)
+
+    return {
+        id: conversation.id,
+        candidateId: conversation.otherUser?.id || '',
+        candidateName: userName,
+        candidateTitle: conversation.job?.title || 'Candidate',
+        candidateAvatar: userAvatar,
+        lastMessage: conversation.lastMessage?.content || 'No messages',
+        timestamp: formatTimestamp(conversation.lastMessage?.created_at || new Date().toISOString()),
+        unreadCount
+    }
+}
+
+// Function to enhance user data with current user info from Supabase
+async function enhanceWithCurrentUserData(conversations: ApiConversation[]): Promise<MessageThread[]> {
+    try {
+        const currentUserId = await getCurrentUserId()
+        console.log('Current user ID:', currentUserId)
+        console.log('Number of conversations to process:', conversations.length)
+
+        // Extract all unique user IDs from conversations
+        const userIds = [...new Set(conversations
+            .map(conv => conv.otherUser?.id)
+            .filter(Boolean)
+        )] as string[]
+
+        console.log('User IDs to fetch:', userIds)
+
+        // Fetch user data for all user IDs at once with enhanced fallback
+        let userMap: {
+            [key: string]: {
+                id: string
+                name: string
+                email: string
+                avatar_url: string | null
+            }
+        } = {}
+
+        try {
+            console.log('Attempting to fetch user data from API...')
+            const users = await api.users.getByIds(userIds)
+            console.log('Fetched user data:', users)
+
+            // Create a map for quick lookup
+            userMap = users.reduce((acc, user) => {
+                if (user.id) {
+                    acc[user.id] = user
+                }
+                return acc
+            }, {} as {
+                [key: string]: {
+                    id: string
+                    name: string
+                    email: string
+                    avatar_url: string | null
+                }
+            })
+
+            console.log('User map from API:', userMap)
+        } catch (error) {
+            console.error('API failed, using fallback strategies:', error)
+
+            // Fallback to mock users and generated names
+            userIds.forEach(userId => {
+                const mockUser = mockUsers.get(userId)
+                if (mockUser) {
+                    userMap[userId] = mockUser
+                    console.log(`Using mock data for user ${userId}: ${mockUser.name}`)
+                } else {
+                    // Generate a friendly fallback name
+                    const friendlyName = generateFriendlyUserName(userId)
+                    userMap[userId] = {
+                        id: userId,
+                        name: friendlyName,
+                        email: '',
+                        avatar_url: null
+                    }
+                    console.log(`Generated friendly name for user ${userId}: ${friendlyName}`)
+                }
+            })
+        }
+
+        console.log('Final user map:', userMap)
+
+        const enhancedThreads = await Promise.all(conversations.map(async (conversation) => {
+            const otherUserId = conversation.otherUser?.id
+
+            console.log('Processing conversation:', conversation.id)
+            console.log('Other user ID:', otherUserId)
+
+            let enhancedUserData = undefined
+
+            // Get user data from our fetched user map
+            if (otherUserId && userMap[otherUserId]) {
+                enhancedUserData = userMap[otherUserId]
+                console.log('Found user data for:', otherUserId, enhancedUserData)
+            } else {
+                console.log('No user data found for:', otherUserId)
+            }
+
+            return await transformConversationToThreadWithUserData(conversation, enhancedUserData)
+        }))
+
+        console.log('Enhanced threads result:', enhancedThreads)
+        return enhancedThreads
+    } catch (error) {
+        console.error('Error enhancing user data:', error)
+        // Fallback to basic transformation with generated names
+        return Promise.all(conversations.map(conv => {
+            const userId = conv.otherUser?.id
+            const mockUser = userId ? mockUsers.get(userId) : null
+            const fallbackData = mockUser || (userId ? {
+                id: userId,
+                name: generateFriendlyUserName(userId),
+                email: '',
+                avatar_url: null
+            } : undefined)
+
+            return transformConversationToThreadWithUserData(conv, fallbackData)
+        }))
     }
 }
 
@@ -296,6 +544,9 @@ export async function getMessageThreads(): Promise<MessageThread[]> {
                 throw new Error('Invalid API response format')
             }
 
+            console.log('Raw conversations data:', conversationsData)
+            console.log('Sample conversation structure:', conversationsData[0])
+
             // Sort conversations by last message timestamp (newest first)
             const sortedConversations = conversationsData.sort((a: ApiConversation, b: ApiConversation) => {
                 const aTime = new Date(a.last_message_at || a.created_at).getTime()
@@ -303,7 +554,11 @@ export async function getMessageThreads(): Promise<MessageThread[]> {
                 return bTime - aTime // Newest first
             })
 
-            return sortedConversations.map(transformConversationToThread)
+            console.log('Sorted conversations:', sortedConversations.length)
+            console.log('First conversation otherUser data:', sortedConversations[0]?.otherUser)
+
+            // Use enhanced transformation with current user data from Supabase
+            return await enhanceWithCurrentUserData(sortedConversations)
         }
     } catch (error) {
         console.error('Failed to get message threads:', error)
@@ -497,21 +752,39 @@ export async function markMessagesAsRead(threadId: string): Promise<void> {
     }
 }
 
-export function getCandidateById(candidateId: string): Candidate | undefined {
-    // Find candidate from conversations data (both mock and real)
-    const conversation = mockApiConversations.find(c => c.otherUser.id === candidateId)
-    if (conversation) {
+export async function getCandidateById(candidateId: string): Promise<Candidate | undefined> {
+    // Try to fetch user data from Supabase/API first
+    try {
+        console.log('Fetching user data for candidate:', candidateId)
+        const userResponse = await api.users.getById(candidateId)
+        const userData = userResponse.data
+
+        if (userData && userData.id) {
+            return {
+                id: userData.id,
+                name: userData.name || 'Unknown User',
+                title: 'Candidate',
+                avatar: userData.avatar_url || '',
+                profileUrl: `/candidates/${candidateId}`
+            }
+        }
+    } catch (error) {
+        console.error('Failed to fetch user data for candidate:', candidateId, error)
+    }
+
+    // Find candidate from conversations data (fallback)
+    const conversation = mockApiConversations.find(c => c.otherUser?.id === candidateId)
+    if (conversation && conversation.otherUser) {
         return {
-            id: conversation.otherUser.id,
-            name: conversation.otherUser.name,
+            id: conversation.otherUser.id || candidateId,
+            name: conversation.otherUser.name || 'Unknown User',
             title: conversation.job?.title || 'Candidate',
-            avatar: conversation.otherUser.avatar_url,
+            avatar: conversation.otherUser.avatar_url || '',
             profileUrl: `/candidates/${candidateId}`
         }
     }
 
-    // If not found in mock data, create a basic candidate object
-    // This handles real conversations that come from the API
+    // Final fallback
     return {
         id: candidateId,
         name: 'Unknown User',

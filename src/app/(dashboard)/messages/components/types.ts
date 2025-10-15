@@ -1,23 +1,23 @@
 // API Response Types (matching the backend API structure)
 export interface ApiConversation {
     id: string
-    otherUser: {
-        id: string
-        name: string
-        avatar_url: string
+    otherUser?: {
+        id?: string
+        name?: string
+        avatar_url?: string
     }
     job?: {
         id: string
         title: string
     }
-    lastMessage: {
+    lastMessage?: {
         content: string
         created_at: string
         is_read: boolean
     }
     created_at: string
     updated_at: string
-    last_message_at: string
+    last_message_at?: string
 }
 
 export interface ApiMessage {

@@ -376,6 +376,171 @@ export const api = {
                const response = await apiClient.get('/conversations/unread-count')
                return response.data
           },
+     },
+
+     // Users APIs (robust fallback system)
+     users: {
+          // Get user by ID with multiple fallback strategies
+          getById: async (userId: string) => {
+               console.log(`Fetching user data for ID: ${userId}`)
+
+               try {
+                    // First try to get from Supabase auth if it's the current user
+                    const { data: { session } } = await supabase.auth.getSession()
+                    if (session?.user?.id === userId) {
+                         console.log('Returning current user data from Supabase auth')
+                         return {
+                              data: {
+                                   id: session.user.id,
+                                   name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || 'Current User',
+                                   email: session.user.email || '',
+                                   avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+                              }
+                         }
+                    }
+
+                    console.log(`User ${userId} is not the current user, trying alternative sources...`)
+
+                    // For other users, try multiple fallback strategies
+                    // Strategy 1: Try different external API endpoints
+                    const possibleEndpoints = [
+                         `/user/${userId}`,
+                         `/users/${userId}`,
+                         `/user/profile/${userId}`,
+                         `/profile/${userId}`
+                    ]
+
+                    for (const endpoint of possibleEndpoints) {
+                         try {
+                              console.log(`Trying external API endpoint: ${endpoint}`)
+                              const response = await cvApiClient.get(endpoint)
+                              if (response.data) {
+                                   console.log(`Successfully fetched user from ${endpoint}`)
+                                   const userData = response.data.data || response.data
+                                   return {
+                                        data: {
+                                             id: userData.id || userId,
+                                             name: userData.name || userData.full_name || userData.username || 'User',
+                                             email: userData.email || '',
+                                             avatar_url: userData.avatar_url || userData.picture || userData.photo || null
+                                        }
+                                   }
+                              }
+                         } catch (apiError) {
+                              const axiosError = apiError as AxiosError
+                              console.log(`Endpoint ${endpoint} failed:`, axiosError?.response?.status)
+                              continue
+                         }
+                    }
+
+                    console.log(`All API endpoints failed for user ${userId}, using fallback`)
+                    // Final fallback: return a user object with readable ID
+                    return {
+                         data: {
+                              id: userId,
+                              name: `User ${userId.substring(0, 8)}...`,
+                              email: '',
+                              avatar_url: null
+                         }
+                    }
+
+               } catch (error) {
+                    console.error(`Error fetching user ${userId}:`, error)
+                    return {
+                         data: {
+                              id: userId,
+                              name: `User ${userId.substring(0, 8)}...`,
+                              email: '',
+                              avatar_url: null
+                         }
+                    }
+               }
+          },
+
+          // Get multiple users by IDs with improved fallback
+          getByIds: async (userIds: string[]) => {
+               console.log(`Fetching ${userIds.length} users:`, userIds)
+
+               try {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    const currentUserId = session?.user?.id
+
+                    const results: Array<{
+                         id: string
+                         name: string
+                         email: string
+                         avatar_url: string | null
+                    }> = []
+
+                    // Add current user data if requested
+                    if (userIds.includes(currentUserId!) && session?.user) {
+                         console.log('Adding current user data to batch results')
+                         results.push({
+                              id: session.user.id,
+                              name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || 'Current User',
+                              email: session.user.email || '',
+                              avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+                         })
+                    }
+
+                    // For other users, fetch individually with fallbacks
+                    const otherUserIds = userIds.filter(id => id !== currentUserId)
+                    if (otherUserIds.length > 0) {
+                         console.log(`Fetching ${otherUserIds.length} other users individually`)
+
+                         const userPromises = otherUserIds.map(async (id) => {
+                              try {
+                                   const userResponse = await api.users.getById(id)
+                                   return userResponse.data
+                              } catch (error) {
+                                   console.error(`Failed to fetch user ${id}:`, error)
+                                   return {
+                                        id,
+                                        name: `User ${id.substring(0, 8)}...`,
+                                        email: '',
+                                        avatar_url: null
+                                   }
+                              }
+                         })
+
+                         const otherUsers = await Promise.all(userPromises)
+                         results.push(...otherUsers)
+                    }
+
+                    console.log(`Successfully fetched ${results.length} users`)
+                    return results
+
+               } catch (error) {
+                    console.error('Error fetching multiple users:', error)
+                    return userIds.map(id => ({
+                         id,
+                         name: `User ${id.substring(0, 8)}...`,
+                         email: '',
+                         avatar_url: null
+                    }))
+               }
+          },
+
+          // Get current user data from Supabase
+          getCurrentUser: async () => {
+               try {
+                    const { data: { session } } = await supabase.auth.getSession()
+                    if (session?.user) {
+                         return {
+                              data: {
+                                   id: session.user.id,
+                                   name: session.user.user_metadata?.name || session.user.user_metadata?.full_name || 'Current User',
+                                   email: session.user.email || '',
+                                   avatar_url: session.user.user_metadata?.avatar_url || session.user.user_metadata?.picture || null
+                              }
+                         }
+                    }
+                    return { data: null }
+               } catch (error) {
+                    console.error('Error fetching current user from Supabase:', error)
+                    return { data: null }
+               }
+          }
      }
 }
 // Export apiClient cho trường hợp muốn custom call
