@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 
 // Base URL cho API backend
 const API_BASE_URL = "http://14.169.93.37:3003"; // Backend API base URL
-const CV_API_BASE_URL = "http://14.169.93.37:3003/api/";
+const CV_API_BASE_URL = "http://14.169.93.37:3003/api";
 
 // Tạo axios instance cho general API
 const apiClient = axios.create({
@@ -333,16 +333,24 @@ export const api = {
           },
      },
 
-     // Admin APIs
-     admin: {
-          // Verify employer profile
-          verifyEmployer: async (id: string, isVerified: boolean) => {
-               const response = await apiClient.patch(`/admin/employers/${id}/verify`, {
-                    is_verified: isVerified,
-               });
-               return response.data;
-          },
-     },
+  // Admin APIs
+  admin: {
+    // Verify employer profile
+    verifyEmployer: async (id: string, isVerified: boolean) => {
+      const response = await apiClient.patch(`/admin/employers/${id}/verify`, {
+        is_verified: isVerified,
+      });
+      return response.data;
+    },
+
+    // Review job (approve/reject)
+    reviewJob: async (jobId: string, status: "active" | "rejected") => {
+      const response = await apiClient.put(`api/admin/jobs/${jobId}/review`, {
+        status: status,
+      });
+      return response.data;
+    },
+  },
 
      // Conversations APIs (Chat Feature)
      conversations: {

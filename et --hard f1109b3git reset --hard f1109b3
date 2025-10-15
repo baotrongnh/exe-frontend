@@ -1,0 +1,36 @@
+[33mf1109b3[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m, [m[1;32mtrongnhb[m[33m)[m Merge pull request #10 from baotrongnh/huylpt
+[33m9d2273f[m chore: add time stamp and user name
+[33mb14354b[m chore: separate apis for my-cv
+[33m86f7d20[m fix: socket token
+[33mbd80338[m feat:update socket chat function
+[33m1ba3788[m Merge branch 'main' of https://github.com/baotrongnh/exe-frontend into huylpt
+[33m7d7b19b[m Merge pull request #9 from baotrongnh/trongnhb
+[33m97fc409[m[33m ([m[1;31morigin/trongnhb[m[33m)[m feat: page
+[33m91c7043[m feat: add messages page
+[33m9dd9d7e[m Merge pull request #8 from baotrongnh/huylpt
+[33md12385d[m feat: add toast for My Cv page
+[33m0f8d989[m Merge pull request #7 from baotrongnh/trongnhb
+[33m39d228d[m feat: navbar
+[33mf3c32f7[m Merge pull request #6 from baotrongnh/trongnhb
+[33m2da1376[m feat: api
+[33mec13c88[m Merge pull request #5 from baotrongnh/huylpt
+[33m9765895[m Merge branch 'main' into huylpt
+[33mdcac93d[m feat: add My CV page
+[33m9c55ddd[m Merge pull request #4 from baotrongnh/trongnhb
+[33mb9dfd28[m feat: search
+[33m4dcce18[m Merge pull request #3 from baotrongnh/trongnhb
+[33mb3052ed[m feat: page
+[33m0efe1ce[m Merge branch 'trongnhb' of https://github.com/baotrongnh/exe-frontend into huylpt
+[33mefdeb3d[m feat: api
+[33mb652ebf[m Merge branch 'trongnhb' of https://github.com/baotrongnh/exe-frontend into huylpt
+[33meef1626[m fix: refactor
+[33m6d57d84[m Merge pull request #2 from baotrongnh/trongnhb
+[33mdf9f509[m feat: page
+[33m5c4b2a0[m feat: page
+[33m9d1e276[m fix: route signup
+[33m9aeeffd[m fix: bug ui
+[33mb7637c0[m fix: bug ui
+[33ma58c925[m Merge pull request #1 from baotrongnh/klong/auth
+[33m9bd8a8d[m feat: add authenticate methods
+[33madfa780[m first commit
+[33m6b3b891[m Initial commit from Create Next App

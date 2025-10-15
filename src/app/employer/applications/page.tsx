@@ -42,6 +42,7 @@ export default function EmployerApplicationsPage() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<{ is_verified: boolean } | null>(null);
+  const [actionLoading, setActionLoading] = useState<string | null>(null); // Track which button is loading
 
   const { user } = useAuth();
   const router = useRouter();
@@ -166,6 +167,40 @@ export default function EmployerApplicationsPage() {
     } catch (error) {
       console.error("Error downloading CV:", error);
       alert("Failed to download CV");
+    }
+  };
+
+  // Handle Schedule Interview - Create conversation with applicant
+  const handleScheduleInterview = async (applicationId: string, freelancerId: string, jobId: string) => {
+    try {
+      setActionLoading(`interview-${applicationId}`);
+      
+      console.log("=== Schedule Interview ===");
+      console.log("Application ID:", applicationId);
+      console.log("Freelancer ID:", freelancerId);
+      console.log("Job ID:", jobId);
+
+      const payload = {
+        freelancerId: freelancerId,
+        jobId: jobId
+      };
+
+      console.log("Payload to send:", payload);
+
+      const response = await api.conversations.create(payload);
+      
+      console.log("Conversation created successfully:", response);
+      
+      alert("Interview scheduled! A conversation has been created.");
+      
+      // Optionally navigate to the conversation page
+      // router.push(`/employer/messages?conversation=${response.data.id}`);
+      
+    } catch (error) {
+      console.error("Error scheduling interview:", error);
+      alert("Failed to schedule interview. Please try again.");
+    } finally {
+      setActionLoading(null);
     }
   };
 
@@ -334,8 +369,18 @@ export default function EmployerApplicationsPage() {
                         <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-32">
                           Shortlist
                         </Button>
-                        <Button size="sm" variant="outline" className="bg-transparent w-32">
-                          Schedule Interview
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="bg-transparent w-32"
+                          onClick={() => handleScheduleInterview(
+                            application.id,
+                            application.applicant_id,
+                            application.job_id
+                          )}
+                          disabled={actionLoading === `interview-${application.id}`}
+                        >
+                          {actionLoading === `interview-${application.id}` ? "Creating..." : "Schedule Interview"}
                         </Button>
                         <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent w-32">
                           Reject
@@ -343,8 +388,17 @@ export default function EmployerApplicationsPage() {
                       </div>
                     )}
                     {application.status === "shortlisted" && (
-                      <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white w-32 mt-2">
-                        Schedule Interview
+                      <Button 
+                        size="sm" 
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white w-32 mt-2"
+                        onClick={() => handleScheduleInterview(
+                          application.id,
+                          application.applicant_id,
+                          application.job_id
+                        )}
+                        disabled={actionLoading === `interview-${application.id}`}
+                      >
+                        {actionLoading === `interview-${application.id}` ? "Creating..." : "Schedule Interview"}
                       </Button>
                     )}
                     {application.status === "interviewing" && (
