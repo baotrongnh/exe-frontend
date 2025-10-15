@@ -1,5 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { AxiosError } from 'axios'
 import { api } from '@/lib/api'
 import { useAuth } from '@/contexts/AuthContext'
 import { useToast } from '@/components/toast'
@@ -23,7 +24,6 @@ export function useCVManagement() {
         try {
             setLoading(true)
             console.log('Loading CVs from API...')
-            console.log('User:', user)
 
             // Check if we have a valid access token
             const token = getAccessToken()
@@ -33,8 +33,17 @@ export function useCVManagement() {
                 throw new Error('No access token available. Please log in again.')
             }
 
-            // Now try with our API client
-            const response = await api.cvs.getAll()
+            // Add timeout to prevent infinite loading
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error('Request timeout after 30 seconds')), 30000)
+            })
+
+            // Race the API call against the timeout
+            const response = await Promise.race([
+                api.cvs.getAll(),
+                timeoutPromise
+            ])
+
             console.log('API Response:', response)
             console.log('Response type:', typeof response)
             console.log('Response keys:', response ? Object.keys(response) : 'null')
@@ -99,15 +108,40 @@ export function useCVManagement() {
                 file_size?: number;
                 fileSize?: number;
             }) => {
-                const previewUrl = await api.cvs.getPreviewUrl(cv.id)
-                return {
-                    id: cv.id,
-                    name: cv.name,
-                    description: cv.description,
-                    uploadDate: new Date(cv.uploaded_at || cv.created_at || cv.uploadDate || Date.now()),
-                    fileName: cv.file_name || cv.fileName,
-                    fileSize: cv.file_size || cv.fileSize,
-                    previewUrl: previewUrl
+                try {
+                    const previewUrl = await api.cvs.getPreviewUrl(cv.id)
+                    return {
+                        id: cv.id,
+                        name: cv.name,
+                        description: cv.description,
+                        uploadDate: new Date(cv.uploaded_at || cv.created_at || cv.uploadDate || Date.now()),
+                        fileName: cv.file_name || cv.fileName,
+                        fileSize: cv.file_size || cv.fileSize,
+                        previewUrl: previewUrl
+                    }
+                } catch (previewError) {
+                    console.warn('Failed to load preview for CV:', cv.id, previewError)
+
+                    // Check if it's a missing file error
+                    let isFileMissing = false
+                    if (previewError instanceof Error && 'response' in previewError) {
+                        const axiosError = previewError as AxiosError
+                        if (axiosError.response?.status === 500) {
+                            isFileMissing = true
+                            console.warn(`CV file ${cv.id} appears to be missing on server`)
+                        }
+                    }
+
+                    return {
+                        id: cv.id,
+                        name: cv.name,
+                        description: cv.description,
+                        uploadDate: new Date(cv.uploaded_at || cv.created_at || cv.uploadDate || Date.now()),
+                        fileName: cv.file_name || cv.fileName,
+                        fileSize: cv.file_size || cv.fileSize,
+                        previewUrl: null,
+                        isFileMissing
+                    }
                 }
             }))
             console.log('Processed CVs:', cvs)
@@ -119,22 +153,30 @@ export function useCVManagement() {
 
             // Handle specific authentication errors
             if (errorMessage.includes('No token provided') || errorMessage.includes('403') || errorMessage.includes('No access token')) {
-                if (confirm(`Authentication error: ${errorMessage}. Would you like to log out and log in again?`)) {
-                    handleAuthError()
-                }
+                console.error('Authentication failed, will handle via context')
+                showToast('Authentication failed. Please refresh the page or log in again.', 'error')
+            } else if (errorMessage.includes('timeout')) {
+                showToast('Request timed out. Please check your connection and try again.', 'error')
             } else {
                 showToast(`Failed to load CVs: ${errorMessage}. Please try again.`, 'error')
             }
+            // Set empty list on error to show proper UI
+            setCvList([])
         } finally {
             setLoading(false)
         }
-    }, [user, getAccessToken, handleAuthError, showToast])
+    }, [getAccessToken, showToast])
 
     // Load CVs on component mount
     useEffect(() => {
         // Only load CVs if user is authenticated
         if (user && !authLoading) {
             loadCVs()
+        }
+        // Reset loading state if user becomes null
+        else if (!user && !authLoading) {
+            setLoading(false)
+            setCvList([])
         }
     }, [user, authLoading, loadCVs])
 
@@ -151,16 +193,32 @@ export function useCVManagement() {
 
     const uploadCV = async (data: { name: string; description: string; file: File }) => {
         try {
+            console.log('useCVManagement: Starting upload process...')
+            console.log('Upload data:', {
+                name: data.name,
+                description: data.description,
+                fileName: data.file.name,
+                fileSize: data.file.size,
+                fileType: data.file.type
+            })
+
             setUploadLoading(true)
-            await api.cvs.upload({
+
+            const result = await api.cvs.upload({
                 cv: data.file,
                 name: data.name.trim(),
                 description: data.description.trim()
             })
+
+            console.log('Upload API response:', result)
+
             // Reload CVs
+            console.log('Reloading CVs after upload...')
             await loadCVs()
+
+            console.log('Upload process completed successfully!')
         } catch (error) {
-            console.error('Error uploading CV:', error)
+            console.error('Error uploading CV in useCVManagement:', error)
             throw error
         } finally {
             setUploadLoading(false)
