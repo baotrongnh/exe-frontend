@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { useSearchParams, useRouter } from "next/navigation"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
 import { Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import {
@@ -32,9 +32,18 @@ function formatRelativeTime(date: Date): string {
     return `${Math.floor(diffInSeconds / 86400)} days ago`
 }
 
-export default function Messages() {
+interface MessagesProps {
+    basePath?: string
+}
+
+export default function Messages({ basePath = "" }: MessagesProps) {
     const searchParams = useSearchParams()
     const router = useRouter()
+    const pathname = usePathname()
+
+    // Auto-detect base path from current URL if not provided
+    const currentBasePath = basePath || (pathname.includes('/employer/') ? '/employer' : '')
+
     const [threads, setThreads] = useState<MessageThread[]>([])
     const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
     const [messages, setMessages] = useState<Message[]>([])
@@ -368,8 +377,8 @@ export default function Messages() {
         setSelectedThreadId(threadId)
         // Clear typing indicators when switching conversations
         setTypingUsers(new Set())
-        // Update URL to include conversation parameter
-        router.push(`/messages?conversation=${threadId}`, { scroll: false })
+        // Update URL to include conversation parameter with correct base path
+        router.push(`${currentBasePath}/messages?conversation=${threadId}`, { scroll: false })
     }
 
     // Filter threads based on search query
