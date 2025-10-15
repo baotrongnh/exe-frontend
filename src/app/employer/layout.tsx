@@ -1,9 +1,6 @@
 "use client"
 
 import type React from "react"
-
-import { useEffect } from "react"
-import { useRouter, usePathname } from "next/navigation"
 import { EmployerSidebar } from "@/components/employer-sidebar"
 
 export default function EmployerLayout({
@@ -11,8 +8,6 @@ export default function EmployerLayout({
 }: {
      children: React.ReactNode
 }) {
-     const router = useRouter()
-     const pathname = usePathname()
 
      // useEffect(() => {
      //      // Check auth for all employer pages except login
@@ -30,9 +25,9 @@ export default function EmployerLayout({
      // }
 
      return (
-          <div className="flex min-h-screen bg-gray-50">
+          <div className="flex h-screen bg-gray-50">
                <EmployerSidebar />
-               <main className="flex-1">{children}</main>
+               <main className="flex-1 overflow-auto">{children}</main>
           </div>
      )
 }
