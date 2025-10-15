@@ -125,26 +125,26 @@ export function useScrollManager({ messages, threadId, isSending = false, onScro
             const lastMessage = messages[messages.length - 1]
             const isOwnMessage = lastMessage?.senderType === 'employer'
 
-            // If it's our own message or we're already at the bottom, scroll down
-            if (isOwnMessage || (!isUserScrollingRef.current || isNearBottom())) {
-                if (isOwnMessage) {
-                    // For own messages, scroll immediately and maintain position
-                    justSentMessageRef.current = true
-                    scrollToBottom("auto", true)
-                } else {
-                    // For received messages, smooth scroll
-                    scrollToBottom("smooth")
-                }
+            // ALWAYS scroll to bottom when there's a new message
+            if (isOwnMessage) {
+                // For own messages, scroll immediately and maintain position
+                justSentMessageRef.current = true
+                scrollToBottom("auto", true)
+            } else {
+                // For received messages, always scroll to bottom (smooth scroll)
+                scrollToBottom("smooth")
             }
         }
         // For initial load or when count goes from 0 to positive
         else if (previousMessageCount === 0 && currentMessageCount > 0) {
-            // Initial load - go to bottom, with longer delay if switching threads
-            const delay = isThreadSwitchingRef.current ? 300 : 150
+            // Initial load - go to bottom immediately with multiple attempts
+            scrollToBottom("auto", true)
+            setTimeout(() => scrollToBottom("auto", true), 50)
+            setTimeout(() => scrollToBottom("auto", true), 100)
             setTimeout(() => {
                 scrollToBottom("auto", true)
                 isThreadSwitchingRef.current = false // Reset flag after scrolling
-            }, delay)
+            }, 200)
         }
         // Handle potential message content changes (same count but different content)
         else if (currentMessageCount === previousMessageCount && (justSentMessageRef.current || isSending)) {
@@ -152,11 +152,11 @@ export function useScrollManager({ messages, threadId, isSending = false, onScro
             setTimeout(() => {
                 scrollToBottom("auto", true)
                 justSentMessageRef.current = false
-            }, 100)
+            }, 50)
         }
 
         previousMessageCountRef.current = currentMessageCount
-    }, [messages, threadId, isSending, isNearBottom, scrollToBottom])
+    }, [messages, threadId, isSending, scrollToBottom])
 
     return {
         messagesEndRef,
