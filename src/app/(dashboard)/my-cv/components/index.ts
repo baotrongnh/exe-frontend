@@ -9,6 +9,7 @@ export { CVGrid } from './CVGrid'
 export { UploadModal } from './UploadModal'
 export { EditModal } from './EditModal'
 export { DetailModal } from './DetailModal'
+export { TroubleshootingPanel } from './TroubleshootingPanel'
 
 // Types
 export type { CV } from './types'

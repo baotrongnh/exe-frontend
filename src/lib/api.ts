@@ -4,7 +4,7 @@ import { supabase } from "./supabase";
 // Base URL cho API backend
 const API_BASE_URL = "http://14.169.93.37:3003"; // Backend API base URL
 
-// Tạo axios instance
+// Tạo axios instance cho general API
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
@@ -12,7 +12,15 @@ const apiClient = axios.create({
   },
 });
 
-// Interceptor để tự động thêm access token vào header
+// Tạo axios instance riêng cho CV API
+const cvApiClient = axios.create({
+     baseURL: CV_API_BASE_URL,
+     headers: {
+          'Content-Type': 'application/json',
+     },
+})
+
+// Interceptor để tự động thêm access token vào header cho general API
 apiClient.interceptors.request.use(
   async (config) => {
     try {
@@ -45,7 +53,37 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Interceptor để xử lý response errors
+// Interceptor để tự động thêm access token vào header cho CV API
+cvApiClient.interceptors.request.use(
+     async (config) => {
+          try {
+               const { data: { session } } = await supabase.auth.getSession()
+               console.log('CV API Session check:', {
+                    hasSession: !!session,
+                    hasAccessToken: !!session?.access_token,
+                    tokenPreview: session?.access_token ? session.access_token.substring(0, 20) + '...' : 'none'
+               })
+
+               if (session?.access_token) {
+                    config.headers.Authorization = `Bearer ${session.access_token}`
+                    console.log('Adding auth token to CV API request:', config.url, 'Token length:', session.access_token.length)
+               } else {
+                    console.warn('No auth token available for CV API request:', config.url)
+                    console.warn('User might not be authenticated for CV API')
+               }
+          } catch (error) {
+               console.error('Error getting session for CV API:', error)
+          }
+
+          return config
+     },
+     (error) => {
+          console.error('CV API Request interceptor error:', error)
+          return Promise.reject(error)
+     }
+)
+
+// Interceptor để xử lý response errors cho general API
 apiClient.interceptors.response.use(
   (response) => {
     console.log("API Response successful:", response.config.url, response.status);
