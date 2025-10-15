@@ -29,12 +29,22 @@ export function ConversationView({
         isSending
     })
 
-    // Handle typing indicator separately
+    // Handle typing indicator - scroll when someone starts typing
     useEffect(() => {
         if (typingUsers.size > 0) {
-            scrollToBottom("smooth")
+            // Scroll to bottom when typing indicator appears
+            setTimeout(() => scrollToBottom("smooth"), 100)
         }
-    }, [typingUsers, scrollToBottom])
+    }, [typingUsers.size, scrollToBottom])
+
+    // Force scroll to bottom when component first mounts or thread changes
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            scrollToBottom("auto")
+        }, 100)
+
+        return () => clearTimeout(timer)
+    }, [threadId, scrollToBottom])
 
     return (
         <div className="flex flex-col h-full min-w-0 overflow-hidden">
@@ -50,8 +60,8 @@ export function ConversationView({
                     />
                 </div>
 
-                {/* Auto scroll target */}
-                <div ref={messagesEndRef} />
+                {/* Auto scroll target - add small height to ensure it's scrollable */}
+                <div ref={messagesEndRef} className="h-1" />
             </div>
         </div>
     )
