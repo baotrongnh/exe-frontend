@@ -16,8 +16,7 @@ export default function PostJobPage() {
     description: "",
     job_type: "FULL_TIME",
     budget_type: "FIXED",
-    budget_min: "",
-    budget_max: "",
+    post_cost: "",
     currency: "VND",
     experience_level: "JUNIOR",
     deadline: "",
@@ -41,8 +40,7 @@ export default function PostJobPage() {
         description: formData.description,
         job_type: formData.job_type,
         budget_type: formData.budget_type,
-        budget_min: parseInt(formData.budget_min) || 0,
-        budget_max: parseInt(formData.budget_max) || 0,
+        post_cost: parseInt(formData.post_cost) || 0,
         currency: formData.currency,
         experience_level: formData.experience_level,
         deadline: formData.deadline || null,
@@ -132,13 +130,9 @@ export default function PostJobPage() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Budget Min *</label>
-                <input type="number" name="budget_min" value={formData.budget_min} onChange={handleChange} required placeholder="e.g. 5000000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Budget Max *</label>
-                <input type="number" name="budget_max" value={formData.budget_max} onChange={handleChange} required placeholder="e.g. 10000000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                <label className="block text-sm font-medium text-gray-700 mb-2">Post Cost *</label>
+                <input type="number" name="post_cost" value={formData.post_cost} onChange={handleChange} required placeholder="e.g. 10000000" min="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                <p className="text-xs text-gray-500 mt-1">Cost to post this job</p>
               </div>
 
               <div>
