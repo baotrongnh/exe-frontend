@@ -2,8 +2,8 @@ import axios, { AxiosError } from "axios";
 import { supabase } from "./supabase";
 
 // Base URL cho API backend
-const API_BASE_URL = "http://14.169.93.37:3003"; // Backend API base URL
-const CV_API_BASE_URL = "http://14.169.93.37:3003/api";
+const API_BASE_URL = "http://14.169.15.9:3003"; // Backend API base URL
+const CV_API_BASE_URL = "http://14.169.15.9:3003/api";
 
 // Tạo axios instance cho general API
 const apiClient = axios.create({
@@ -141,7 +141,9 @@ cvApiClient.interceptors.response.use(
           }
           return Promise.reject(error);
      }
-); // API functions
+);
+
+// API functions
 export const api = {
      // Jobs APIs
      jobs: {
@@ -333,24 +335,81 @@ export const api = {
           },
      },
 
-  // Admin APIs
-  admin: {
-    // Verify employer profile
-    verifyEmployer: async (id: string, isVerified: boolean) => {
-      const response = await apiClient.patch(`/admin/employers/${id}/verify`, {
-        is_verified: isVerified,
-      });
-      return response.data;
-    },
+     // Admin APIs
+     admin: {
+          // Verify employer profile
+          verifyEmployer: async (id: string, isVerified: boolean) => {
+               const response = await apiClient.patch(`/admin/employers/${id}/verify`, {
+                    is_verified: isVerified,
+               });
+               return response.data;
+          },
 
-    // Review job (approve/reject)
-    reviewJob: async (jobId: string, status: "active" | "rejected") => {
-      const response = await apiClient.put(`api/admin/jobs/${jobId}/review`, {
-        status: status,
-      });
-      return response.data;
-    },
-  },
+          // Review job (approve/reject)
+          reviewJob: async (jobId: string, status: "active" | "rejected") => {
+               const response = await apiClient.put(`api/admin/jobs/${jobId}/review`, {
+                    status: status,
+               });
+               return response.data;
+          },
+     },
+
+     // Wallet APIs
+     wallet: {
+          // Create new wallet
+          create: async (data?: { currency?: string; initial_balance?: number }) => {
+               const response = await apiClient.post("/api/wallet/create", data || {});
+               return response;
+          },
+
+          // Get wallet info
+          get: async () => {
+               const response = await apiClient.get("/api/wallet");
+               return response.data;
+          },
+
+          // Get wallet balance
+          getBalance: async () => {
+               const response = await apiClient.get("/api/wallet/balance");
+               return response.data;
+          },
+
+          // Get wallet transactions
+          getTransactions: async (params?: {
+               page?: number;
+               limit?: number;
+               type?: "deposit" | "withdraw" | "payment" | "refund";
+               startDate?: string;
+               endDate?: string;
+          }) => {
+               const response = await apiClient.get("/api/wallet/transactions", { params });
+               return response.data;
+          },
+
+          // Deposit money
+          deposit: async (data: { amount: number; method: string; description?: string }) => {
+               const response = await apiClient.post("/api/wallet/deposit", data);
+               return response.data;
+          },
+
+          // Withdraw money
+          withdraw: async (data: { amount: number; method: string; description?: string }) => {
+               const response = await apiClient.post("/api/wallet/withdraw", data);
+               return response.data;
+          },
+
+          // Get QR code for deposit
+          getCode: async () => {
+               const response = await apiClient.get("/api/wallet/code");
+               return response.data;
+          },
+
+          // Check payment status
+          checkPayment: async (code: string) => {
+               const response = await apiClient.post(`/api/wallet/recharge`, { code });
+               return response.data;
+          },
+     },
 
      // Conversations APIs (Chat Feature)
      conversations: {
