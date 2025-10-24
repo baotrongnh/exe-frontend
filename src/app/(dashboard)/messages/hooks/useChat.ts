@@ -97,7 +97,7 @@ export function useChat(options: UseChatOptions = {}) {
                     return
                 }                // Initialize socket connection with better configuration
                 // Use the specified chat server
-                const socketUrl = 'http://14.169.93.37:3003' // Chat server URL
+                const socketUrl = 'http://14.169.15.9:3003' // Chat server URL
                 const serverMode = 'production'
 
                 console.log('🔌 Environment detection:', {
