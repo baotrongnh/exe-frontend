@@ -10,11 +10,16 @@ export interface Wallet {
 export interface WalletTransaction {
      id: string;
      wallet_id: string;
-     amount: number;
-     transaction_type: "deposit" | "withdraw" | "payment" | "refund";
-     status: "pending" | "completed" | "failed" | "cancelled";
+     transaction_type: "DEPOSIT" | "WITHDRAW" | "JOB_POST" | "REFUND" | "payment" | "deposit" | "withdraw" | "refund";
+     amount: string | number;
+     currency?: string;
+     balance_before?: string | number;
+     balance_after?: string | number;
+     reference_id?: string | null;
+     reference_type?: string | null;
      description?: string;
-     reference_id?: string;
+     status: "pending" | "completed" | "failed" | "cancelled";
+     metadata?: any;
      created_at: string;
      updated_at: string;
 }
