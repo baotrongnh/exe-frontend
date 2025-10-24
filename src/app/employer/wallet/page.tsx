@@ -27,24 +27,30 @@ export default function WalletPage() {
      const fetchTransactions = async () => {
           try {
                setLoading(true);
-               const data = await api.wallet.getTransactions({
+               const response = await api.wallet.getTransactions({
                     page,
                     limit: 10,
                });
 
-               console.log("📊 Transactions API Response:", data);
-               console.log("📊 Response structure:", {
-                    hasData: !!data,
-                    dataKeys: data ? Object.keys(data) : [],
-                    transactions: data?.transactions,
-                    items: data?.items,
-                    results: data?.results,
-                    rawData: data
-               });
+               console.log("📊 Transactions API Response:", response);
 
-               // Handle different response formats
-               const transactionsList = data?.transactions || data?.items || data?.results || data?.data || [];
-               const total = data?.totalPages || data?.total_pages || data?.pages || 1;
+               // Handle API response format: { success: true, data: { transactions: [...], pagination: {...} } }
+               let transactionsList = [];
+               let total = 1;
+
+               if (response?.data?.data?.transactions) {
+                    // New format: { data: { data: { transactions: [...], pagination: {...} } } }
+                    transactionsList = response.data.data.transactions;
+                    total = response.data.data.pagination?.total_pages || 1;
+               } else if (response?.data?.transactions) {
+                    // Format: { data: { transactions: [...], pagination: {...} } }
+                    transactionsList = response.data.transactions;
+                    total = response.data.pagination?.total_pages || 1;
+               } else if (response?.transactions) {
+                    // Direct format: { transactions: [...] }
+                    transactionsList = response.transactions;
+                    total = response.totalPages || response.total_pages || 1;
+               }
 
                // Ensure transactionsList is an array
                const validTransactions = Array.isArray(transactionsList) ? transactionsList : [];
@@ -52,8 +58,7 @@ export default function WalletPage() {
                setTransactions(validTransactions);
                setTotalPages(total);
 
-               console.log("✅ Transactions set:", validTransactions.length, "items");
-               console.log("✅ Is array:", Array.isArray(validTransactions));
+               console.log("✅ Transactions loaded:", validTransactions.length, "items");
           } catch (error: any) {
                console.error("❌ Error fetching transactions:", error);
                console.error("❌ Error details:", {
@@ -74,20 +79,23 @@ export default function WalletPage() {
           }
      };
 
-     const formatCurrency = (amount: number) => {
+     const formatCurrency = (amount: number | string) => {
+          const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
           return new Intl.NumberFormat("vi-VN", {
                style: "currency",
                currency: "VND",
-          }).format(amount);
+          }).format(numAmount);
      };
 
      const getTransactionIcon = (type: string) => {
-          switch (type) {
-               case "deposit":
-               case "refund":
+          const upperType = type.toUpperCase();
+          switch (upperType) {
+               case "DEPOSIT":
+               case "REFUND":
                     return <ArrowDownRight className="h-4 w-4 text-green-600" />;
-               case "withdraw":
-               case "payment":
+               case "WITHDRAW":
+               case "JOB_POST":
+               case "PAYMENT":
                     return <ArrowUpRight className="h-4 w-4 text-red-600" />;
                default:
                     return <Clock className="h-4 w-4" />;
@@ -104,40 +112,6 @@ export default function WalletPage() {
 
           return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
      };
-
-     // Mock data for demonstration
-     const getMockTransactions = (): WalletTransaction[] => [
-          {
-               id: "mock-1",
-               wallet_id: "mock-wallet",
-               amount: 500000,
-               transaction_type: "deposit",
-               status: "completed",
-               description: "Nạp tiền qua QR Code",
-               created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-               updated_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-               id: "mock-2",
-               wallet_id: "mock-wallet",
-               amount: 200000,
-               transaction_type: "payment",
-               status: "completed",
-               description: "Thanh toán dịch vụ đăng tin",
-               created_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-               updated_at: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(),
-          },
-          {
-               id: "mock-3",
-               wallet_id: "mock-wallet",
-               amount: 100000,
-               transaction_type: "deposit",
-               status: "pending",
-               description: "Đang chờ xác nhận thanh toán",
-               created_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-               updated_at: new Date(Date.now() - 1 * 60 * 60 * 1000).toISOString(),
-          },
-     ];
 
      const handleDeposit = async () => {
           try {
@@ -280,51 +254,9 @@ export default function WalletPage() {
                                         </div>
                                    ) : transactions.length === 0 ? (
                                         <div className="space-y-4">
-                                             <div className="text-center py-4 text-muted-foreground">
+                                             <div className="text-center py-8 text-muted-foreground">
                                                   <p className="mb-2">No transactions found</p>
                                                   <p className="text-xs">Transactions will appear here after you make deposits or payments</p>
-                                             </div>
-
-                                             {/* Mock data for preview */}
-                                             <div className="border-t pt-4">
-                                                  <p className="text-sm font-medium text-muted-foreground mb-3">Preview (Mock Data):</p>
-                                                  {getMockTransactions().map((transaction) => (
-                                                       <div
-                                                            key={transaction.id}
-                                                            className="flex items-center justify-between p-4 rounded-lg border mb-3 opacity-60"
-                                                       >
-                                                            <div className="flex items-center gap-4">
-                                                                 <div className="p-2 rounded-full bg-muted">
-                                                                      {getTransactionIcon(transaction.transaction_type)}
-                                                                 </div>
-                                                                 <div>
-                                                                      <p className="font-medium capitalize">
-                                                                           {transaction.transaction_type}
-                                                                      </p>
-                                                                      {transaction.description && (
-                                                                           <p className="text-sm text-muted-foreground">
-                                                                                {transaction.description}
-                                                                           </p>
-                                                                      )}
-                                                                      <p className="text-xs text-muted-foreground">
-                                                                           {new Date(transaction.created_at).toLocaleString("vi-VN")}
-                                                                      </p>
-                                                                 </div>
-                                                            </div>
-                                                            <div className="text-right space-y-1">
-                                                                 <p className={`font-semibold ${transaction.transaction_type === "deposit" ||
-                                                                      transaction.transaction_type === "refund"
-                                                                      ? "text-green-600"
-                                                                      : "text-red-600"
-                                                                      }`}>
-                                                                      {transaction.transaction_type === "deposit" ||
-                                                                           transaction.transaction_type === "refund" ? "+" : "-"}
-                                                                      {formatCurrency(transaction.amount)}
-                                                                 </p>
-                                                                 {getStatusBadge(transaction.status)}
-                                                            </div>
-                                                       </div>
-                                                  ))}
                                              </div>
                                         </div>
                                    ) : (
