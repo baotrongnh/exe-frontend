@@ -6,8 +6,6 @@ import type { DashboardOverview } from "@/types/admin";
 import {
   BarChart,
   Bar,
-  LineChart,
-  Line,
   PieChart,
   Pie,
   Cell,
@@ -28,11 +26,6 @@ export default function AdminDashboardPage() {
   >("week");
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => {
-    setMounted(true);
-    fetchOverview();
-  }, [period]);
-
   const fetchOverview = async () => {
     try {
       setLoading(true);
@@ -43,13 +36,20 @@ export default function AdminDashboardPage() {
       } else {
         setError(response.message || "Failed to load dashboard data");
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error fetching dashboard overview:", err);
-      setError(err.response?.data?.message || "Failed to load dashboard data");
+      const errorMessage = err instanceof Error ? err.message : "Failed to load dashboard data";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    setMounted(true);
+    fetchOverview();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [period]);
 
   const formatNumber = (num: number): string => {
     return new Intl.NumberFormat("vi-VN").format(num);
@@ -121,12 +121,11 @@ export default function AdminDashboardPage() {
           />
         </svg>
       ),
-      subtitle: `${overview?.users?.freelancers || 0} freelancers, ${
-        overview?.users?.employers || 0
-      } employers`,
+      subtitle: `${overview?.users?.freelancers || 0} freelancers, ${overview?.users?.employers || 0
+        } employers`,
     },
     {
-      title: "Revenue",
+      title: "Total Revenue",
       value: formatCurrency(overview?.revenue?.total || 0),
       change: `${overview?.revenue?.transactions_count || 0} transactions`,
       changeType: "positive",
@@ -150,8 +149,8 @@ export default function AdminDashboardPage() {
       )}`,
     },
     {
-      title: "Pending Jobs",
-      value: formatNumber(overview?.jobs?.pending || 0),
+      title: "Active Jobs",
+      value: formatNumber(overview?.jobs?.active || 0),
       change: `${overview?.jobs?.total || 0} total jobs`,
       changeType: "positive",
       icon: (
@@ -169,16 +168,12 @@ export default function AdminDashboardPage() {
           />
         </svg>
       ),
-      subtitle: `${overview?.jobs?.active || 0} active`,
+      subtitle: `${overview?.jobs?.pending || 0} pending`,
     },
     {
-      title: "Reviews",
-      value: formatNumber(overview?.reviews?.total || 0),
-      change: `${
-        typeof overview?.reviews?.average_rating === "number"
-          ? overview.reviews.average_rating.toFixed(1)
-          : overview?.reviews?.average_rating || 0
-      }★ avg`,
+      title: "Total Applications",
+      value: formatNumber(overview?.applications?.total || 0),
+      change: `${overview?.applications?.pending || 0} pending`,
       changeType: "positive",
       icon: (
         <svg
@@ -191,11 +186,11 @@ export default function AdminDashboardPage() {
             strokeLinecap="round"
             strokeLinejoin="round"
             strokeWidth={2}
-            d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"
+            d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
           />
         </svg>
       ),
-      subtitle: `${overview?.reviews.verified || 0} verified`,
+      subtitle: `${overview?.applications?.accepted || 0} accepted`,
     },
   ];
 
@@ -213,11 +208,10 @@ export default function AdminDashboardPage() {
             <button
               key={p}
               onClick={() => setPeriod(p)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                period === p
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${period === p
                   ? "bg-indigo-600 text-white"
                   : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
+                }`}
             >
               {p.charAt(0).toUpperCase() + p.slice(1)}
             </button>
@@ -253,6 +247,47 @@ export default function AdminDashboardPage() {
 
       {/* Statistics Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* Platform Revenue (if available) */}
+        {overview?.platform_revenue && (
+          <div className="bg-white rounded-lg border border-gray-200 p-6 md:col-span-2">
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Platform Revenue Details
+            </h2>
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Platform Fee</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {formatCurrency(overview.platform_revenue.total_platform_fee)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Revenue Txns</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {formatNumber(overview.platform_revenue.revenue_transactions)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Avg Fee</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {formatCurrency(overview.platform_revenue.average_fee)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Total Job Value</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {formatCurrency(overview.platform_revenue.total_job_value)}
+                </p>
+              </div>
+              <div>
+                <p className="text-sm text-gray-600 mb-1">Freelancer Paid</p>
+                <p className="text-xl font-bold text-gray-900">
+                  {formatCurrency(overview.platform_revenue.total_freelancer_paid)}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Transactions Breakdown */}
         <div className="bg-white rounded-lg border border-gray-200 p-6">
           <h2 className="text-lg font-semibold text-gray-900 mb-4">
@@ -272,6 +307,14 @@ export default function AdminDashboardPage() {
                   </div>
                 )
               )}
+            <div className="pt-3 border-t border-gray-200">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-gray-900">Total</span>
+                <span className="text-sm font-bold text-gray-900">
+                  {formatNumber(overview?.transactions?.total || 0)}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -285,27 +328,35 @@ export default function AdminDashboardPage() {
               <>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Active</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-green-600">
                     {formatNumber(overview.jobs.active)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Pending</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-yellow-600">
                     {formatNumber(overview.jobs.pending)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Completed</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-blue-600">
                     {formatNumber(overview.jobs.completed)}
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Rejected</span>
-                  <span className="text-sm font-semibold text-gray-900">
+                  <span className="text-sm font-semibold text-red-600">
                     {formatNumber(overview.jobs.rejected)}
                   </span>
+                </div>
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-semibold text-gray-900">Total</span>
+                    <span className="text-sm font-bold text-gray-900">
+                      {formatNumber(overview.jobs.total)}
+                    </span>
+                  </div>
                 </div>
               </>
             )}
@@ -343,9 +394,10 @@ export default function AdminDashboardPage() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={(entry: any) =>
-                  `${entry.name}: ${(entry.percent * 100).toFixed(0)}%`
-                }
+                label={(entry) => {
+                  const data = entry as unknown as { name: string; percent: number };
+                  return `${data.name}: ${(data.percent * 100).toFixed(0)}%`;
+                }}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -386,27 +438,27 @@ export default function AdminDashboardPage() {
               data={
                 overview?.transactions?.by_type
                   ? [
-                      {
-                        name: "Job Posts",
-                        value: overview.transactions.by_type.job_posts,
-                        fill: "#3b82f6",
-                      },
-                      {
-                        name: "Deposits",
-                        value: overview.transactions.by_type.deposits,
-                        fill: "#10b981",
-                      },
-                      {
-                        name: "Refunds",
-                        value: overview.transactions.by_type.refunds,
-                        fill: "#f59e0b",
-                      },
-                      {
-                        name: "Withdrawals",
-                        value: overview.transactions.by_type.withdrawals,
-                        fill: "#ef4444",
-                      },
-                    ]
+                    {
+                      name: "Job Posts",
+                      value: overview.transactions.by_type.job_posts,
+                      fill: "#3b82f6",
+                    },
+                    {
+                      name: "Deposits",
+                      value: overview.transactions.by_type.deposits,
+                      fill: "#10b981",
+                    },
+                    {
+                      name: "Refunds",
+                      value: overview.transactions.by_type.refunds,
+                      fill: "#f59e0b",
+                    },
+                    {
+                      name: "Withdrawals",
+                      value: overview.transactions.by_type.withdrawals,
+                      fill: "#ef4444",
+                    },
+                  ]
                   : []
               }
             >
@@ -432,27 +484,27 @@ export default function AdminDashboardPage() {
               data={
                 overview?.jobs
                   ? [
-                      {
-                        name: "Active",
-                        value: overview.jobs.active,
-                        fill: "#10b981",
-                      },
-                      {
-                        name: "Pending",
-                        value: overview.jobs.pending,
-                        fill: "#f59e0b",
-                      },
-                      {
-                        name: "Completed",
-                        value: overview.jobs.completed,
-                        fill: "#3b82f6",
-                      },
-                      {
-                        name: "Rejected",
-                        value: overview.jobs.rejected,
-                        fill: "#ef4444",
-                      },
-                    ]
+                    {
+                      name: "Active",
+                      value: overview.jobs.active,
+                      fill: "#10b981",
+                    },
+                    {
+                      name: "Pending",
+                      value: overview.jobs.pending,
+                      fill: "#f59e0b",
+                    },
+                    {
+                      name: "Completed",
+                      value: overview.jobs.completed,
+                      fill: "#3b82f6",
+                    },
+                    {
+                      name: "Rejected",
+                      value: overview.jobs.rejected,
+                      fill: "#ef4444",
+                    },
+                  ]
                   : []
               }
               layout="vertical"
@@ -494,9 +546,10 @@ export default function AdminDashboardPage() {
                 cx="50%"
                 cy="50%"
                 labelLine={false}
-                label={(entry: any) =>
-                  `${entry.name}: ${(entry.percent * 100).toFixed(0)}%`
-                }
+                label={(entry) => {
+                  const data = entry as unknown as { name: string; percent: number };
+                  return `${data.name}: ${(data.percent * 100).toFixed(0)}%`;
+                }}
                 outerRadius={80}
                 fill="#8884d8"
                 dataKey="value"
@@ -533,7 +586,18 @@ export default function AdminDashboardPage() {
         <h2 className="text-lg font-semibold text-gray-900 mb-4">
           Platform Statistics
         </h2>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-6">
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Total Reviews</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {formatNumber(overview?.reviews?.total || 0)}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {typeof overview?.reviews?.average_rating === "number"
+                ? overview.reviews.average_rating.toFixed(1)
+                : overview?.reviews?.average_rating || "0.0"}★ average
+            </p>
+          </div>
           <div>
             <p className="text-sm text-gray-600 mb-1">Unverified Users</p>
             <p className="text-2xl font-bold text-gray-900">
