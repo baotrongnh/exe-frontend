@@ -179,49 +179,50 @@ export interface TransactionsData {
 }
 
 export interface Review {
-  id: number;
+  id: string;
   user_id: string;
-  role: "freelancer" | "employer";
+  user_role: "FREELANCER" | "EMPLOYER";
   rating: number;
-  title: string;
   comment: string;
-  aspect_ratings: {
-    ease_of_use: number;
-    job_quality: number;
-    support: number;
+  aspects: {
     payment: number;
+    support: number;
+    job_quality: number;
+    user_interface: number;
   };
+  completed_jobs_count: number;
+  total_earned: string;
+  is_verified: boolean;
+  is_visible: boolean;
   helpful_count: number;
-  is_verified_user: boolean;
+  admin_response: string | null;
   status: "active" | "hidden" | "flagged";
-  createdAt: string;
-  user: {
+  created_at: string;
+  updated_at: string;
+  reviewer: {
+    id: string;
     email: string;
-    name: string;
-    verified: boolean;
+    full_name: string;
+    role: "FREELANCER" | "EMPLOYER";
   };
 }
 
 export interface ReviewsData {
   reviews: Review[];
-  statistics: {
-    totalReviews: number;
-    averageRating: number;
-    ratingDistribution: {
-      [key: string]: number;
-    };
-    byRole: {
-      freelancer: number;
-      employer: number;
-    };
-    verified: number;
-    unverified: number;
-  };
   pagination: {
+    total: number;
     page: number;
     limit: number;
-    total: number;
-    totalPages: number;
+    pages: number;
+  };
+  statistics: {
+    average_rating: string;
+    employer_review_count: number;
+    freelancer_review_count: number;
+    rating_distribution: Array<{
+      rating: number;
+      count: string;
+    }>;
   };
 }
 
