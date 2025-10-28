@@ -13,7 +13,7 @@ import {
     DialogClose,
 } from '@/components/ui/dialog'
 import { Label } from '@/components/ui/label'
-import { Star } from 'lucide-react'
+import { Star, Hash, Package, Briefcase, UserCircle, User, MessageSquare, Calendar } from 'lucide-react'
 
 // Mock Review Data Type
 interface Review {
@@ -139,8 +139,8 @@ const StarRating = ({ rating }: { rating: number }) => {
                 <Star
                     key={star}
                     className={`w-4 h-4 ${star <= rating
-                            ? 'fill-yellow-400 text-yellow-400'
-                            : 'fill-none text-gray-300'
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'fill-none text-gray-300'
                         }`}
                 />
             ))}
@@ -329,28 +329,52 @@ export default function ReviewsPage() {
                                 <thead className="bg-gray-50 border-b border-gray-200">
                                     <tr>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            🆔 Review ID
+                                            <div className="flex items-center gap-1.5">
+                                                <Hash className="w-4 h-4" />
+                                                Review ID
+                                            </div>
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            📦 Project
+                                            <div className="flex items-center gap-1.5">
+                                                <Package className="w-4 h-4" />
+                                                Project
+                                            </div>
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            🧑‍💼 Employer
+                                            <div className="flex items-center gap-1.5">
+                                                <Briefcase className="w-4 h-4" />
+                                                Employer
+                                            </div>
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            🧑‍🔧 Freelancer
+                                            <div className="flex items-center gap-1.5">
+                                                <UserCircle className="w-4 h-4" />
+                                                Freelancer
+                                            </div>
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            👤 Reviewer
+                                            <div className="flex items-center gap-1.5">
+                                                <User className="w-4 h-4" />
+                                                Reviewer
+                                            </div>
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            ⭐ Rating
+                                            <div className="flex items-center gap-1.5">
+                                                <Star className="w-4 h-4" />
+                                                Rating
+                                            </div>
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            💬 Comment
+                                            <div className="flex items-center gap-1.5">
+                                                <MessageSquare className="w-4 h-4" />
+                                                Comment
+                                            </div>
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            📅 Date
+                                            <div className="flex items-center gap-1.5">
+                                                <Calendar className="w-4 h-4" />
+                                                Date
+                                            </div>
                                         </th>
                                     </tr>
                                 </thead>
@@ -381,8 +405,8 @@ export default function ReviewsPage() {
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
                                                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${review.reviewer_role === 'Freelancer'
-                                                        ? 'bg-blue-50 text-blue-700 border border-blue-200'
-                                                        : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                    : 'bg-purple-50 text-purple-700 border border-purple-200'
                                                     }`}>
                                                     {review.reviewer_role}
                                                 </span>
