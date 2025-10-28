@@ -14,7 +14,6 @@ import {
   getMessageThreads,
   getMessagesByThreadId,
   sendMessage,
-  getCandidateById,
   markMessagesAsRead,
   useChat,
   transformMessageToUI,
@@ -107,11 +106,11 @@ export default function Messages({ basePath = "" }: MessagesProps) {
           const updatedThreads = prev.map((thread) =>
             thread.id === apiMessage.conversation_id
               ? {
-                  ...thread,
-                  lastMessage: apiMessage.content,
-                  timestamp: formatRelativeTime(new Date()),
-                  unreadCount: thread.unreadCount + 1,
-                }
+                ...thread,
+                lastMessage: apiMessage.content,
+                timestamp: formatRelativeTime(new Date()),
+                unreadCount: thread.unreadCount + 1,
+              }
               : thread
           );
 
@@ -172,14 +171,14 @@ export default function Messages({ basePath = "" }: MessagesProps) {
         const updatedThreads = prev.map((thread) =>
           thread.id === apiMessage.conversation_id
             ? {
-                ...thread,
-                lastMessage: apiMessage.content,
-                timestamp: formatRelativeTime(new Date()),
-                unreadCount:
-                  thread.id === selectedThreadId
-                    ? thread.unreadCount
-                    : thread.unreadCount + 1,
-              }
+              ...thread,
+              lastMessage: apiMessage.content,
+              timestamp: formatRelativeTime(new Date()),
+              unreadCount:
+                thread.id === selectedThreadId
+                  ? thread.unreadCount
+                  : thread.unreadCount + 1,
+            }
             : thread
         );
 
@@ -356,16 +355,20 @@ export default function Messages({ basePath = "" }: MessagesProps) {
           setMessages(uniqueMessages);
           lastLoadedThreadRef.current = selectedThreadId;
 
-          // Find and set candidate info
+          // Find and set candidate info from thread data
           const thread = threads.find((t) => t.id === selectedThreadId);
+          console.log('📋 Selected thread data:', thread);
           if (thread) {
-            try {
-              const candidate = await getCandidateById(thread.candidateId);
-              setSelectedCandidate(candidate || null);
-            } catch (error) {
-              console.error("Failed to get candidate info:", error);
-              setSelectedCandidate(null);
-            }
+            // Create candidate object directly from thread data
+            const candidate: Candidate = {
+              id: thread.candidateId,
+              name: thread.candidateName,
+              title: thread.candidateTitle,
+              avatar: thread.candidateAvatar,
+              profileUrl: `/candidates/${thread.candidateId}`
+            };
+            console.log('👤 Created candidate from thread:', candidate);
+            setSelectedCandidate(candidate);
 
             // Mark messages as read when conversation is opened
             if (thread.unreadCount > 0) {
@@ -452,10 +455,10 @@ export default function Messages({ basePath = "" }: MessagesProps) {
         const updatedThreads = prev.map((thread) =>
           thread.id === selectedThreadId
             ? {
-                ...thread,
-                lastMessage: content,
-                timestamp: formatRelativeTime(new Date()),
-              }
+              ...thread,
+              lastMessage: content,
+              timestamp: formatRelativeTime(new Date()),
+            }
             : thread
         );
 
@@ -567,9 +570,8 @@ export default function Messages({ basePath = "" }: MessagesProps) {
             {/* Connection status */}
             <div className="flex items-center gap-2">
               <div
-                className={`w-2 h-2 rounded-full ${
-                  isConnected ? "bg-green-500" : "bg-red-500"
-                }`}
+                className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500" : "bg-red-500"
+                  }`}
               ></div>
               <span className="text-xs text-gray-500">
                 {isConnected ? "Connected" : connectionError || "Disconnected"}
