@@ -116,7 +116,9 @@ export function useVideoCall(options: UseVideoCallOptions) {
           }
         });
       } else {
-        console.warn("⚠️ No local stream available when creating peer connection");
+        console.warn(
+          "⚠️ No local stream available when creating peer connection"
+        );
       }
 
       // Handle incoming tracks (remote stream)
@@ -465,7 +467,7 @@ export function useVideoCall(options: UseVideoCallOptions) {
 
         console.log("🔧 Creating peer connection...");
         const pc = createPeerConnection(data.from, data.callId);
-        
+
         console.log("🎬 Creating offer...");
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
@@ -542,7 +544,12 @@ export function useVideoCall(options: UseVideoCallOptions) {
       sdp: RTCSessionDescriptionInit;
       callId: string;
     }) => {
-      console.log("📥 Received answer from:", data.from, "callId:", data.callId);
+      console.log(
+        "📥 Received answer from:",
+        data.from,
+        "callId:",
+        data.callId
+      );
       try {
         if (peerConnectionRef.current) {
           console.log("🔧 Setting remote description (answer)...");
@@ -571,12 +578,12 @@ export function useVideoCall(options: UseVideoCallOptions) {
       callId: string;
     }) => {
       console.log("📥 Received ICE candidate from:", data.from, {
-        type: data.candidate.candidate?.includes("typ") 
-          ? data.candidate.candidate.split("typ ")[1]?.split(" ")[0] 
+        type: data.candidate.candidate?.includes("typ")
+          ? data.candidate.candidate.split("typ ")[1]?.split(" ")[0]
           : "unknown",
         candidate: data.candidate.candidate,
       });
-      
+
       try {
         if (peerConnectionRef.current) {
           await peerConnectionRef.current.addIceCandidate(
