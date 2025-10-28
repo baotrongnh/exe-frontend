@@ -6,6 +6,13 @@ export interface DashboardOverview {
     transactions_count: number;
     average_per_transaction: number | string;
   };
+  platform_revenue?: {
+    total_platform_fee: number | string;
+    revenue_transactions: number;
+    average_fee: number | string;
+    total_job_value: number | string;
+    total_freelancer_paid: number | string;
+  };
   users: {
     total_users: number;
     freelancers: number;
@@ -25,7 +32,7 @@ export interface DashboardOverview {
   reviews: {
     total: number;
     average_rating: number | string;
-    verified: number;
+    verified?: number;
     by_role: {
       freelancers: number;
       employers: number;
@@ -59,7 +66,7 @@ export interface Transaction {
   reference_type: "JOB" | "RECHARGE" | null;
   description: string;
   status: "completed" | "pending" | "failed";
-  metadata: any;
+  metadata: Record<string, unknown> | null;
   created_at: string;
   updated_at: string;
   wallet: {
@@ -123,45 +130,36 @@ export interface RevenueChartData {
 }
 
 export interface UserActivity {
-  jobsCreated: number;
-  applications: number;
-  reviews: number;
+  jobs_created: number;
+  applications_count: number;
+  reviews_count: number;
 }
 
 export interface UserWallet {
   balance: number;
-  totalSpent: number;
-  totalDeposited: number;
+  total_spent: number;
+  total_deposited: number;
 }
 
 export interface AdminUser {
   id: string;
   email: string;
-  role: "freelancer" | "employer";
-  email_confirmed_at: string | null;
+  full_name: string;
+  role?: "freelancer" | "employer";
+  email_confirmed: boolean;
   created_at: string;
-  last_sign_in_at: string;
-  user_metadata: {
-    full_name?: string;
-  };
-  wallet: UserWallet;
+  last_sign_in: string;
+  wallet: UserWallet | null;
   activity: UserActivity;
 }
 
 export interface UsersData {
   users: AdminUser[];
-  summary: {
-    totalUsers: number;
-    freelancers: number;
-    employers: number;
-    verified: number;
-    unverified: number;
-  };
   pagination: {
     page: number;
     limit: number;
     total: number;
-    totalPages: number;
+    pages: number;
   };
 }
 
