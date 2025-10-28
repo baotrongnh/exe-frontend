@@ -34,9 +34,30 @@ interface CallData {
 
 const ICE_SERVERS = {
   iceServers: [
+    // Google STUN servers
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+    // Free TURN servers (for NAT traversal)
+    {
+      urls: "turn:openrelay.metered.ca:80",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
+    {
+      urls: "turn:openrelay.metered.ca:443?transport=tcp",
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    },
   ],
+  iceCandidatePoolSize: 10,
 };
 
 export function useVideoCall(options: UseVideoCallOptions) {
@@ -77,41 +98,80 @@ export function useVideoCall(options: UseVideoCallOptions) {
         peerConnectionRef.current.close();
       }
 
+      console.log("🔗 Creating peer connection with ICE servers:", ICE_SERVERS);
       const pc = new RTCPeerConnection(ICE_SERVERS);
 
       // Add local stream tracks to peer connection
       if (localStreamRef.current) {
+        console.log("📹 Adding local tracks to peer connection");
         localStreamRef.current.getTracks().forEach((track) => {
           if (localStreamRef.current) {
+            console.log(`➕ Adding ${track.kind} track:`, {
+              id: track.id,
+              enabled: track.enabled,
+              muted: track.muted,
+              readyState: track.readyState,
+            });
             pc.addTrack(track, localStreamRef.current);
           }
         });
+      } else {
+        console.warn("⚠️ No local stream available when creating peer connection");
       }
 
       // Handle incoming tracks (remote stream)
       pc.ontrack = (event) => {
+        console.log("📥 Received remote track:", {
+          kind: event.track.kind,
+          id: event.track.id,
+          enabled: event.track.enabled,
+          muted: event.track.muted,
+          streams: event.streams.length,
+        });
         setRemoteStream(event.streams[0]);
       };
 
       // Handle ICE candidates
       pc.onicecandidate = (event) => {
         if (event.candidate && socketRef.current) {
+          console.log("🧊 Sending ICE candidate:", {
+            type: event.candidate.type,
+            protocol: event.candidate.protocol,
+            address: event.candidate.address,
+          });
           socketRef.current.emit("webrtc:ice-candidate", {
             to: remoteUserId,
             candidate: event.candidate,
             callId: callId,
           });
+        } else if (!event.candidate) {
+          console.log("✅ ICE gathering completed");
+        }
+      };
+
+      // Handle ICE gathering state
+      pc.onicegatheringstatechange = () => {
+        console.log("🧊 ICE gathering state:", pc.iceGatheringState);
+      };
+
+      // Handle ICE connection state
+      pc.oniceconnectionstatechange = () => {
+        console.log("🧊 ICE connection state:", pc.iceConnectionState);
+        if (pc.iceConnectionState === "failed") {
+          console.error("❌ ICE connection failed - may need TURN servers");
         }
       };
 
       // Handle connection state changes
       pc.onconnectionstatechange = () => {
+        console.log("🔗 Connection state:", pc.connectionState);
         if (pc.connectionState === "connected") {
           setCallData((prev) => ({ ...prev, status: "connected" }));
         } else if (
           pc.connectionState === "disconnected" ||
           pc.connectionState === "failed"
         ) {
+          console.error("❌ Connection lost:", pc.connectionState);
           setCallData((prev) => ({
             ...prev,
             status: "error",
@@ -129,13 +189,36 @@ export function useVideoCall(options: UseVideoCallOptions) {
   // Get user media (camera + microphone)
   const getUserMedia = useCallback(async () => {
     try {
+      console.log("🎥 Requesting user media...");
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           width: { ideal: 1280 },
           height: { ideal: 720 },
           facingMode: "user",
         },
-        audio: true,
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+        },
+      });
+
+      console.log("✅ Got media stream:", {
+        id: stream.id,
+        active: stream.active,
+        videoTracks: stream.getVideoTracks().length,
+        audioTracks: stream.getAudioTracks().length,
+      });
+
+      stream.getTracks().forEach((track) => {
+        console.log(`📹 Track ${track.kind}:`, {
+          id: track.id,
+          label: track.label,
+          enabled: track.enabled,
+          muted: track.muted,
+          readyState: track.readyState,
+          settings: track.getSettings(),
+        });
       });
 
       localStreamRef.current = stream;
@@ -143,7 +226,7 @@ export function useVideoCall(options: UseVideoCallOptions) {
       return stream;
     } catch (error: any) {
       console.error(
-        "Error accessing media devices:",
+        "❌ Error accessing media devices:",
         error.name,
         error.message
       );
@@ -189,8 +272,9 @@ export function useVideoCall(options: UseVideoCallOptions) {
   // Initiate call
   const initiateCall = useCallback(
     async (remoteUserId: string) => {
+      console.log("📞 Initiating call to:", remoteUserId);
       if (!socket || !isConnected) {
-        console.error("Socket not connected");
+        console.error("❌ Socket not connected");
         return;
       }
 
@@ -202,8 +286,10 @@ export function useVideoCall(options: UseVideoCallOptions) {
         }));
 
         // Create call session via REST API
+        console.log("🔄 Creating call session via API...");
         const response = await api.videoCall.create();
         const { data: call } = response;
+        console.log("✅ Call session created:", call.id);
 
         setCallData((prev) => ({
           ...prev,
@@ -212,16 +298,20 @@ export function useVideoCall(options: UseVideoCallOptions) {
         }));
 
         // Get user media
+        console.log("🎥 Getting user media...");
         await getUserMedia();
+        console.log("✅ User media obtained");
 
         // Notify remote user via socket
+        console.log("📤 Sending call notification to:", remoteUserId);
         socket.emit("webrtc:call", {
           to: remoteUserId,
           callId: call.id,
           room_name: call.room_name,
         });
+        console.log("✅ Call notification sent");
       } catch (error) {
-        console.error("Error initiating call:", error);
+        console.error("❌ Error initiating call:", error);
         setCallData((prev) => ({
           ...prev,
           status: "error",
@@ -235,8 +325,9 @@ export function useVideoCall(options: UseVideoCallOptions) {
   // Accept incoming call
   const acceptCall = useCallback(
     async (callId: string, fromUserId: string) => {
+      console.log("✅ Accepting call from:", fromUserId, "callId:", callId);
       if (!socket || !isConnected) {
-        console.error("Socket not connected");
+        console.error("❌ Socket not connected");
         return;
       }
 
@@ -249,18 +340,24 @@ export function useVideoCall(options: UseVideoCallOptions) {
         });
 
         // Join call via REST API
+        console.log("🔄 Joining call via API...");
         await api.videoCall.join(callId);
+        console.log("✅ Joined call successfully");
 
         // Get user media
+        console.log("🎥 Getting user media...");
         await getUserMedia();
+        console.log("✅ User media obtained");
 
         // Notify caller that we accepted (so they can start sending offer)
+        console.log("📤 Sending call-accepted notification to:", fromUserId);
         socket.emit("webrtc:call-accepted", {
           to: fromUserId,
           callId: callId,
         });
+        console.log("✅ Call-accepted notification sent");
       } catch (error) {
-        console.error("Error accepting call:", error);
+        console.error("❌ Error accepting call:", error);
         setCallData((prev) => ({
           ...prev,
           status: "error",
@@ -354,27 +451,39 @@ export function useVideoCall(options: UseVideoCallOptions) {
       from: string;
       callId: string;
     }) => {
+      console.log("✅ Call accepted by:", data.from, "callId:", data.callId);
       try {
         // Ensure we have local stream
         if (!localStreamRef.current) {
+          console.log("🎥 Local stream not found, getting user media...");
           await getUserMedia();
+        } else {
+          console.log("✅ Local stream already available");
         }
 
         setCallData((prev) => ({ ...prev, status: "connecting" }));
 
+        console.log("🔧 Creating peer connection...");
         const pc = createPeerConnection(data.from, data.callId);
+        
+        console.log("🎬 Creating offer...");
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
+        console.log("✅ Local description (offer) set");
 
         if (socket) {
+          console.log("📤 Sending offer to:", data.from);
           socket.emit("webrtc:offer", {
             to: data.from,
             sdp: offer,
             callId: data.callId,
           });
+          console.log("✅ Offer sent");
+        } else {
+          console.warn("⚠️ Socket not available to send offer");
         }
       } catch (error) {
-        console.error("Error sending offer after acceptance:", error);
+        console.error("❌ Error sending offer after acceptance:", error);
         setCallData((prev) => ({
           ...prev,
           status: "error",
@@ -389,6 +498,7 @@ export function useVideoCall(options: UseVideoCallOptions) {
       sdp: RTCSessionDescriptionInit;
       callId: string;
     }) => {
+      console.log("📥 Received offer from:", data.from, "callId:", data.callId);
       try {
         setCallData((prev) => ({
           ...prev,
@@ -399,11 +509,16 @@ export function useVideoCall(options: UseVideoCallOptions) {
         await new Promise((resolve) => setTimeout(resolve, 50));
 
         const pc = createPeerConnection(data.from, data.callId);
+        console.log("🔧 Setting remote description (offer)...");
         await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
+        console.log("✅ Remote description set");
 
+        console.log("🎬 Creating answer...");
         const answer = await pc.createAnswer();
         await pc.setLocalDescription(answer);
+        console.log("✅ Local description (answer) set");
 
+        console.log("📤 Sending answer to:", data.from);
         socket.emit("webrtc:answer", {
           to: data.from,
           sdp: answer,
@@ -412,7 +527,7 @@ export function useVideoCall(options: UseVideoCallOptions) {
 
         setCallData((prev) => ({ ...prev, status: "connected" }));
       } catch (error) {
-        console.error("Error handling offer:", error);
+        console.error("❌ Error handling offer:", error);
         setCallData((prev) => ({
           ...prev,
           status: "error",
@@ -427,15 +542,20 @@ export function useVideoCall(options: UseVideoCallOptions) {
       sdp: RTCSessionDescriptionInit;
       callId: string;
     }) => {
+      console.log("📥 Received answer from:", data.from, "callId:", data.callId);
       try {
         if (peerConnectionRef.current) {
+          console.log("🔧 Setting remote description (answer)...");
           await peerConnectionRef.current.setRemoteDescription(
             new RTCSessionDescription(data.sdp)
           );
+          console.log("✅ Remote description (answer) set");
           setCallData((prev) => ({ ...prev, status: "connected" }));
+        } else {
+          console.warn("⚠️ No peer connection to set answer");
         }
       } catch (error) {
-        console.error("Error handling answer:", error);
+        console.error("❌ Error handling answer:", error);
         setCallData((prev) => ({
           ...prev,
           status: "error",
@@ -450,14 +570,24 @@ export function useVideoCall(options: UseVideoCallOptions) {
       candidate: RTCIceCandidateInit;
       callId: string;
     }) => {
+      console.log("📥 Received ICE candidate from:", data.from, {
+        type: data.candidate.candidate?.includes("typ") 
+          ? data.candidate.candidate.split("typ ")[1]?.split(" ")[0] 
+          : "unknown",
+        candidate: data.candidate.candidate,
+      });
+      
       try {
         if (peerConnectionRef.current) {
           await peerConnectionRef.current.addIceCandidate(
             new RTCIceCandidate(data.candidate)
           );
+          console.log("✅ Added ICE candidate successfully");
+        } else {
+          console.warn("⚠️ No peer connection to add ICE candidate");
         }
       } catch (error) {
-        console.error("Error adding ICE candidate:", error);
+        console.error("❌ Error adding ICE candidate:", error);
       }
     };
 
