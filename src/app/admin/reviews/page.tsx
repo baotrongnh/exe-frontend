@@ -1,513 +1,590 @@
-"use client";
+"use client"
 
-import { useEffect, useState } from "react";
-import { adminDashboardApi } from "@/lib/admin-dashboard-api";
-import type { ReviewsData, ReviewsParams } from "@/types/admin";
+import React, { useState, useEffect } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
-  BarChart,
-  Bar,
-  PieChart,
-  Pie,
-  Cell,
-  RadarChart,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
-  Radar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer,
-} from "recharts";
+    Dialog,
+    DialogContent,
+    DialogHeader,
+    DialogTitle,
+    DialogDescription,
+    DialogFooter,
+    DialogClose,
+} from '@/components/ui/dialog'
+import { Label } from '@/components/ui/label'
+import { Star, Hash, Package, Briefcase, UserCircle, User, MessageSquare, Calendar } from 'lucide-react'
 
+// Mock Review Data Type
+interface Review {
+    id: number
+    project_title: string
+    employer_name: string
+    freelancer_name: string
+    reviewer_role: 'Freelancer' | 'Employer'
+    rating: number
+    comment: string
+    created_at: string
+}
+
+// Mock API Data
+const mockReviews: Review[] = [
+    {
+        id: 1,
+        project_title: "Website Redesign",
+        employer_name: "Tran Thi B",
+        freelancer_name: "Nguyen Van A",
+        reviewer_role: "Employer",
+        rating: 5,
+        comment: "The freelancer delivered excellent quality and on time. Very professional and responsive to feedback.",
+        created_at: "2025-10-21",
+    },
+    {
+        id: 2,
+        project_title: "Mobile App UI",
+        employer_name: "Pham Van C",
+        freelancer_name: "Le Minh Khoa",
+        reviewer_role: "Freelancer",
+        rating: 4,
+        comment: "Good communication from the employer, payment was prompt. Clear requirements provided.",
+        created_at: "2025-10-22",
+    },
+    {
+        id: 3,
+        project_title: "E-commerce Platform",
+        employer_name: "Nguyen Thi Mai",
+        freelancer_name: "Hoang Van Duc",
+        reviewer_role: "Employer",
+        rating: 5,
+        comment: "Outstanding work! The freelancer went above and beyond expectations. Highly recommend.",
+        created_at: "2025-10-23",
+    },
+    {
+        id: 4,
+        project_title: "Logo Design",
+        employer_name: "Le Van Hai",
+        freelancer_name: "Vo Thi Lan",
+        reviewer_role: "Freelancer",
+        rating: 3,
+        comment: "Project was completed but communication could be better. Payment took longer than expected.",
+        created_at: "2025-10-24",
+    },
+    {
+        id: 5,
+        project_title: "API Integration",
+        employer_name: "Dang Van Minh",
+        freelancer_name: "Tran Minh Tu",
+        reviewer_role: "Employer",
+        rating: 5,
+        comment: "Professional freelancer with strong technical skills. Delivered clean code and comprehensive documentation.",
+        created_at: "2025-10-25",
+    },
+    {
+        id: 6,
+        project_title: "Content Writing",
+        employer_name: "Pham Thi Hong",
+        freelancer_name: "Nguyen Van Khanh",
+        reviewer_role: "Freelancer",
+        rating: 4,
+        comment: "Good employer to work with. Clear guidelines and constructive feedback throughout the project.",
+        created_at: "2025-10-26",
+    },
+    {
+        id: 7,
+        project_title: "Data Analysis",
+        employer_name: "Hoang Minh Tuan",
+        freelancer_name: "Le Thi Nga",
+        reviewer_role: "Employer",
+        rating: 4,
+        comment: "Solid analytical skills. Delivered insights on time with good visualizations. Minor revisions needed.",
+        created_at: "2025-10-27",
+    },
+    {
+        id: 8,
+        project_title: "Video Editing",
+        employer_name: "Vu Van Thanh",
+        freelancer_name: "Tran Thi Huong",
+        reviewer_role: "Freelancer",
+        rating: 2,
+        comment: "Poor communication and constantly changing requirements. Made the project difficult to complete.",
+        created_at: "2025-10-27",
+    },
+    {
+        id: 9,
+        project_title: "SEO Optimization",
+        employer_name: "Nguyen Van Long",
+        freelancer_name: "Pham Thi Thao",
+        reviewer_role: "Employer",
+        rating: 5,
+        comment: "Excellent SEO work! Website traffic increased significantly. Will definitely hire again.",
+        created_at: "2025-10-28",
+    },
+    {
+        id: 10,
+        project_title: "Social Media Management",
+        employer_name: "Le Thi Hoa",
+        freelancer_name: "Hoang Van Nam",
+        reviewer_role: "Freelancer",
+        rating: 5,
+        comment: "Amazing employer! Very supportive and provided all necessary resources. Great experience overall.",
+        created_at: "2025-10-28",
+    },
+]
+
+// Star Rating Component
+const StarRating = ({ rating }: { rating: number }) => {
+    return (
+        <div className="flex items-center gap-0.5">
+            {[1, 2, 3, 4, 5].map((star) => (
+                <Star
+                    key={star}
+                    className={`w-4 h-4 ${star <= rating
+                        ? 'fill-yellow-400 text-yellow-400'
+                        : 'fill-none text-gray-300'
+                        }`}
+                />
+            ))}
+            <span className="ml-1.5 text-sm text-gray-600">({rating}/5)</span>
+        </div>
+    )
+}
+
+// Main Reviews Page Component
 export default function ReviewsPage() {
-  const [data, setData] = useState<ReviewsData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [mounted, setMounted] = useState(false);
-  const [params, setParams] = useState<ReviewsParams>({
-    page: 1,
-    limit: 20,
-    sortBy: "createdAt",
-    sortOrder: "DESC",
-  });
+    const [reviews, setReviews] = useState<Review[]>([])
+    const [filteredReviews, setFilteredReviews] = useState<Review[]>([])
+    const [loading, setLoading] = useState(true)
+    const [searchTerm, setSearchTerm] = useState('')
+    const [roleFilter, setRoleFilter] = useState<'all' | 'Freelancer' | 'Employer'>('all')
+    const [currentPage, setCurrentPage] = useState(1)
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const itemsPerPage = 10
 
-  useEffect(() => {
-    setMounted(true);
-    fetchReviews();
-  }, [params]);
+    // New Review Form State
+    const [newReview, setNewReview] = useState({
+        project_title: '',
+        employer_name: '',
+        freelancer_name: '',
+        reviewer_role: 'Employer' as 'Freelancer' | 'Employer',
+        rating: 5,
+        comment: '',
+    })
 
-  const fetchReviews = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await adminDashboardApi.getReviews(params);
-      if (response.success) {
-        setData(response.data);
-      } else {
-        setError(response.message || "Failed to load reviews");
-      }
-    } catch (err: any) {
-      console.error("Error fetching reviews:", err);
-      setError(err.response?.data?.message || "Failed to load reviews");
-    } finally {
-      setLoading(false);
+    // Mock API Call - Simulate fetching reviews
+    useEffect(() => {
+        setLoading(true)
+        setTimeout(() => {
+            setReviews(mockReviews)
+            setFilteredReviews(mockReviews)
+            setLoading(false)
+        }, 1000)
+    }, [])
+
+    // Filter and Search Logic
+    useEffect(() => {
+        let filtered = reviews
+
+        // Apply role filter
+        if (roleFilter !== 'all') {
+            filtered = filtered.filter(review => review.reviewer_role === roleFilter)
+        }
+
+        // Apply search filter
+        if (searchTerm) {
+            filtered = filtered.filter(review =>
+                review.project_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                review.employer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                review.freelancer_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                review.comment.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        }
+
+        setFilteredReviews(filtered)
+        setCurrentPage(1) // Reset to first page when filters change
+    }, [searchTerm, roleFilter, reviews])
+
+    // Pagination Logic
+    const indexOfLastItem = currentPage * itemsPerPage
+    const indexOfFirstItem = indexOfLastItem - itemsPerPage
+    const currentReviews = filteredReviews.slice(indexOfFirstItem, indexOfLastItem)
+    const totalPages = Math.ceil(filteredReviews.length / itemsPerPage)
+
+    // Format Date
+    const formatDate = (dateString: string) => {
+        const date = new Date(dateString)
+        return date.toLocaleDateString('en-GB', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+        })
     }
-  };
 
-  const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleString("vi-VN");
-  };
+    // Handle Add Review
+    const handleAddReview = () => {
+        const review: Review = {
+            id: reviews.length + 1,
+            project_title: newReview.project_title,
+            employer_name: newReview.employer_name,
+            freelancer_name: newReview.freelancer_name,
+            reviewer_role: newReview.reviewer_role,
+            rating: newReview.rating,
+            comment: newReview.comment,
+            created_at: new Date().toISOString().split('T')[0],
+        }
 
-  const renderStars = (rating: number) => {
+        setReviews([review, ...reviews])
+        setIsModalOpen(false)
+
+        // Reset form
+        setNewReview({
+            project_title: '',
+            employer_name: '',
+            freelancer_name: '',
+            reviewer_role: 'Employer',
+            rating: 5,
+            comment: '',
+        })
+    }
+
+    // Truncate long text
+    const truncateText = (text: string, maxLength: number) => {
+        if (text.length <= maxLength) return text
+        return text.substring(0, maxLength) + '...'
+    }
+
     return (
-      <div className="flex items-center gap-1">
-        {[1, 2, 3, 4, 5].map((star) => (
-          <svg
-            key={star}
-            className={`w-5 h-5 ${
-              star <= rating ? "text-yellow-400 fill-current" : "text-gray-300"
-            }`}
-            viewBox="0 0 20 20"
-          >
-            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-          </svg>
-        ))}
-      </div>
-    );
-  };
-
-  const handleFilterChange = (key: keyof ReviewsParams, value: any) => {
-    setParams({ ...params, [key]: value, page: 1 });
-  };
-
-  const handlePageChange = (newPage: number) => {
-    setParams({ ...params, page: newPage });
-  };
-
-  if (!mounted) {
-    return null;
-  }
-
-  if (loading) {
-    return (
-      <div className="p-8">
-        <div className="flex items-center justify-center h-64">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600"></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="p-8">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <h3 className="text-red-800 font-semibold mb-2">Error</h3>
-          <p className="text-red-600">{error}</p>
-          <button
-            onClick={fetchReviews}
-            className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="p-8" suppressHydrationWarning>
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900">Reviews Management</h1>
-        <p className="text-gray-600 mt-1">
-          Moderate and manage platform reviews
-        </p>
-      </div>
-
-      {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-8">
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Total Reviews</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {data?.statistics?.totalReviews || 0}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Average Rating</p>
-          <div className="flex items-center gap-2">
-            <p className="text-2xl font-bold text-gray-900">
-              {data?.statistics?.averageRating?.toFixed(1) || 0}
-            </p>
-            <span className="text-yellow-400">★</span>
-          </div>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Verified</p>
-          <p className="text-2xl font-bold text-green-600">
-            {data?.statistics?.verified || 0}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Freelancer</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {data?.statistics?.byRole?.freelancer || 0}
-          </p>
-        </div>
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <p className="text-sm text-gray-600 mb-1">Employer</p>
-          <p className="text-2xl font-bold text-gray-900">
-            {data?.statistics?.byRole?.employer || 0}
-          </p>
-        </div>
-      </div>
-
-      {/* Charts Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-        {/* Rating Distribution Bar Chart */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Rating Distribution
-          </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <BarChart
-              data={
-                data?.statistics?.ratingDistribution
-                  ? [
-                      {
-                        rating: "5 Stars",
-                        count: data.statistics.ratingDistribution["5"] || 0,
-                        fill: "#10b981",
-                      },
-                      {
-                        rating: "4 Stars",
-                        count: data.statistics.ratingDistribution["4"] || 0,
-                        fill: "#84cc16",
-                      },
-                      {
-                        rating: "3 Stars",
-                        count: data.statistics.ratingDistribution["3"] || 0,
-                        fill: "#f59e0b",
-                      },
-                      {
-                        rating: "2 Stars",
-                        count: data.statistics.ratingDistribution["2"] || 0,
-                        fill: "#f97316",
-                      },
-                      {
-                        rating: "1 Star",
-                        count: data.statistics.ratingDistribution["1"] || 0,
-                        fill: "#ef4444",
-                      },
-                    ]
-                  : []
-              }
-            >
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="rating" />
-              <YAxis />
-              <Tooltip />
-              <Bar dataKey="count" />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-
-        {/* Reviews by Role Pie Chart */}
-        <div className="bg-white rounded-lg border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-4">
-            Reviews by Role
-          </h2>
-          <ResponsiveContainer width="100%" height={300}>
-            <PieChart>
-              <Pie
-                data={[
-                  {
-                    name: "Freelancer",
-                    value: data?.statistics?.byRole?.freelancer || 0,
-                    color: "#3b82f6",
-                  },
-                  {
-                    name: "Employer",
-                    value: data?.statistics?.byRole?.employer || 0,
-                    color: "#8b5cf6",
-                  },
-                ]}
-                cx="50%"
-                cy="50%"
-                labelLine={false}
-                label={(entry: any) =>
-                  `${entry.name}: ${entry.value} (${(
-                    (entry.value /
-                      ((data?.statistics?.byRole?.freelancer || 0) +
-                        (data?.statistics?.byRole?.employer || 0))) *
-                    100
-                  ).toFixed(1)}%)`
-                }
-                outerRadius={80}
-                fill="#8884d8"
-                dataKey="value"
-              >
-                {[
-                  {
-                    name: "Freelancer",
-                    value: data?.statistics?.byRole?.freelancer || 0,
-                    color: "#3b82f6",
-                  },
-                  {
-                    name: "Employer",
-                    value: data?.statistics?.byRole?.employer || 0,
-                    color: "#8b5cf6",
-                  },
-                ].map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Pie>
-              <Tooltip />
-              <Legend />
-            </PieChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-
-      {/* Verified vs Unverified Chart */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-8">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">
-          Verification Status
-        </h2>
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart
-            data={[
-              {
-                name: "Verified",
-                count: data?.statistics?.verified || 0,
-                fill: "#10b981",
-              },
-              {
-                name: "Unverified",
-                count: data?.statistics?.unverified || 0,
-                fill: "#ef4444",
-              },
-            ]}
-            layout="vertical"
-          >
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis type="number" />
-            <YAxis dataKey="name" type="category" />
-            <Tooltip />
-            <Bar dataKey="count" />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg border border-gray-200 p-6 mb-6">
-        <h3 className="text-lg font-semibold mb-4">Filters</h3>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Role
-            </label>
-            <select
-              value={params.role || ""}
-              onChange={(e) =>
-                handleFilterChange("role", e.target.value || undefined)
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">All Roles</option>
-              <option value="freelancer">Freelancer</option>
-              <option value="employer">Employer</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Rating
-            </label>
-            <select
-              value={params.rating || ""}
-              onChange={(e) =>
-                handleFilterChange(
-                  "rating",
-                  e.target.value ? Number(e.target.value) : undefined
-                )
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">All Ratings</option>
-              <option value="5">5 Stars</option>
-              <option value="4">4 Stars</option>
-              <option value="3">3 Stars</option>
-              <option value="2">2 Stars</option>
-              <option value="1">1 Star</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Verified
-            </label>
-            <select
-              value={
-                params.verified === undefined
-                  ? ""
-                  : params.verified
-                  ? "true"
-                  : "false"
-              }
-              onChange={(e) =>
-                handleFilterChange(
-                  "verified",
-                  e.target.value === "" ? undefined : e.target.value === "true"
-                )
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">All</option>
-              <option value="true">Verified Only</option>
-              <option value="false">Unverified Only</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              value={params.status || ""}
-              onChange={(e) =>
-                handleFilterChange("status", e.target.value || undefined)
-              }
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-            >
-              <option value="">All Status</option>
-              <option value="active">Active</option>
-              <option value="hidden">Hidden</option>
-              <option value="flagged">Flagged</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      {/* Reviews List */}
-      <div className="space-y-4">
-        {data?.reviews.map((review) => (
-          <div
-            key={review.id}
-            className="bg-white rounded-lg border border-gray-200 p-6"
-          >
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-3 mb-2">
-                  <h3 className="text-lg font-semibold text-gray-900">
-                    {review.title}
-                  </h3>
-                  {review.is_verified_user && (
-                    <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
-                      Verified
-                    </span>
-                  )}
-                  <span
-                    className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                      review.status === "active"
-                        ? "bg-blue-100 text-blue-800"
-                        : review.status === "hidden"
-                        ? "bg-gray-100 text-gray-800"
-                        : "bg-red-100 text-red-800"
-                    }`}
-                  >
-                    {review.status}
-                  </span>
+        <div className="p-8">
+            {/* Header Section */}
+            <div className="mb-8">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold text-gray-900">Transaction Reviews</h1>
+                        <p className="text-gray-600 mt-1">
+                            See all feedback exchanged between Freelancers and Employers after completed projects.
+                        </p>
+                    </div>
+                    <Button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2">
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Add Review
+                    </Button>
                 </div>
-                {renderStars(review.rating)}
-              </div>
-              <div className="text-right text-sm text-gray-500">
-                <div>{formatDate(review.createdAt)}</div>
-                <div className="mt-1">👍 {review.helpful_count}</div>
-              </div>
             </div>
 
-            <p className="text-gray-700 mb-4">{review.comment}</p>
+            {/* Filters Section */}
+            <div className="bg-white rounded-lg border border-gray-200 mb-6 p-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                    {/* Search Input */}
+                    <div className="flex-1">
+                        <Input
+                            type="text"
+                            placeholder="Search by project, employer, or freelancer name..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="w-full"
+                        />
+                    </div>
 
-            {/* Aspect Ratings */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4 p-4 bg-gray-50 rounded-lg">
-              <div>
-                <p className="text-xs text-gray-600 mb-1">Ease of Use</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold">
-                    {review.aspect_ratings.ease_of_use}
-                  </span>
-                  <span className="text-yellow-400">★</span>
+                    {/* Role Filter */}
+                    <div className="w-full md:w-64">
+                        <select
+                            value={roleFilter}
+                            onChange={(e) => setRoleFilter(e.target.value as 'all' | 'Freelancer' | 'Employer')}
+                            className="w-full h-9 px-3 py-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="all">All Reviews</option>
+                            <option value="Freelancer">Freelancer Reviews</option>
+                            <option value="Employer">Employer Reviews</option>
+                        </select>
+                    </div>
                 </div>
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 mb-1">Job Quality</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold">
-                    {review.aspect_ratings.job_quality}
-                  </span>
-                  <span className="text-yellow-400">★</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 mb-1">Support</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold">
-                    {review.aspect_ratings.support}
-                  </span>
-                  <span className="text-yellow-400">★</span>
-                </div>
-              </div>
-              <div>
-                <p className="text-xs text-gray-600 mb-1">Payment</p>
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold">
-                    {review.aspect_ratings.payment}
-                  </span>
-                  <span className="text-yellow-400">★</span>
-                </div>
-              </div>
             </div>
 
-            {/* User Info */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span className="px-2 py-1 bg-gray-100 rounded">
-                {review.role}
-              </span>
-              <span>{review.user.name}</span>
-              <span className="text-gray-400">•</span>
-              <span>{review.user.email}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+            {/* Reviews Table */}
+            <div className="bg-white rounded-lg border border-gray-200">
+                <div className="p-6 border-b border-gray-200">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        All Reviews ({filteredReviews.length})
+                    </h2>
+                </div>
 
-      {/* Pagination */}
-      <div className="mt-6 bg-white rounded-lg border border-gray-200 px-6 py-4 flex items-center justify-between">
-        <div className="text-sm text-gray-600">
-          Showing {((params.page || 1) - 1) * (params.limit || 20) + 1} to{" "}
-          {Math.min(
-            (params.page || 1) * (params.limit || 20),
-            data?.pagination.total || 0
-          )}{" "}
-          of {data?.pagination.total} results
+                {loading ? (
+                    <div className="p-12 text-center">
+                        <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-indigo-600"></div>
+                        <p className="mt-4 text-gray-600">Loading reviews...</p>
+                    </div>
+                ) : currentReviews.length === 0 ? (
+                    <div className="p-12 text-center text-gray-500">
+                        <svg className="mx-auto h-12 w-12 text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4" />
+                        </svg>
+                        No reviews found matching your filters.
+                    </div>
+                ) : (
+                    <>
+                        {/* Table */}
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead className="bg-gray-50 border-b border-gray-200">
+                                    <tr>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
+                                                <Hash className="w-4 h-4" />
+                                                Review ID
+                                            </div>
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
+                                                <Package className="w-4 h-4" />
+                                                Project
+                                            </div>
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
+                                                <Briefcase className="w-4 h-4" />
+                                                Employer
+                                            </div>
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
+                                                <UserCircle className="w-4 h-4" />
+                                                Freelancer
+                                            </div>
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
+                                                <User className="w-4 h-4" />
+                                                Reviewer
+                                            </div>
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
+                                                <Star className="w-4 h-4" />
+                                                Rating
+                                            </div>
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
+                                                <MessageSquare className="w-4 h-4" />
+                                                Comment
+                                            </div>
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
+                                                <Calendar className="w-4 h-4" />
+                                                Date
+                                            </div>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody className="bg-white divide-y divide-gray-200">
+                                    {currentReviews.map((review) => (
+                                        <tr key={review.id} className="hover:bg-gray-50 transition-colors">
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                                #{review.id}
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-gray-900 font-medium">
+                                                {review.project_title}
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-900">{review.employer_name}</span>
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-800">
+                                                        Employer
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-sm text-gray-900">{review.freelancer_name}</span>
+                                                    <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-800">
+                                                        Freelancer
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${review.reviewer_role === 'Freelancer'
+                                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                                    : 'bg-purple-50 text-purple-700 border border-purple-200'
+                                                    }`}>
+                                                    {review.reviewer_role}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap">
+                                                <StarRating rating={review.rating} />
+                                            </td>
+                                            <td className="px-4 py-4 text-sm text-gray-600 max-w-xs">
+                                                <span title={review.comment}>
+                                                    {truncateText(review.comment, 100)}
+                                                </span>
+                                            </td>
+                                            <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
+                                                {formatDate(review.created_at)}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Pagination */}
+                        {totalPages > 1 && (
+                            <div className="px-6 py-4 border-t border-gray-200">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-gray-600">
+                                        Showing {indexOfFirstItem + 1} to {Math.min(indexOfLastItem, filteredReviews.length)} of{' '}
+                                        {filteredReviews.length} results
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                                            disabled={currentPage === 1}
+                                        >
+                                            Previous
+                                        </Button>
+                                        <div className="flex gap-1">
+                                            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                                                <Button
+                                                    key={page}
+                                                    variant={currentPage === page ? "default" : "outline"}
+                                                    size="sm"
+                                                    onClick={() => setCurrentPage(page)}
+                                                    className="min-w-[2.5rem]"
+                                                >
+                                                    {page}
+                                                </Button>
+                                            ))}
+                                        </div>
+                                        <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                                            disabled={currentPage === totalPages}
+                                        >
+                                            Next
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </>
+                )}
+            </div>
+
+            {/* Add Review Modal */}
+            <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+                <DialogContent>
+                    <DialogClose onClose={() => setIsModalOpen(false)} />
+                    <DialogHeader>
+                        <DialogTitle>Add New Review</DialogTitle>
+                        <DialogDescription>
+                            Create a new review for a completed project.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4 py-4">
+                        {/* Project Title */}
+                        <div>
+                            <Label htmlFor="project_title">Project Title *</Label>
+                            <Input
+                                id="project_title"
+                                value={newReview.project_title}
+                                onChange={(e) => setNewReview({ ...newReview, project_title: e.target.value })}
+                                placeholder="Enter project title"
+                                className="mt-1"
+                            />
+                        </div>
+
+                        {/* Employer Name */}
+                        <div>
+                            <Label htmlFor="employer_name">Employer Name *</Label>
+                            <Input
+                                id="employer_name"
+                                value={newReview.employer_name}
+                                onChange={(e) => setNewReview({ ...newReview, employer_name: e.target.value })}
+                                placeholder="Enter employer name"
+                                className="mt-1"
+                            />
+                        </div>
+
+                        {/* Freelancer Name */}
+                        <div>
+                            <Label htmlFor="freelancer_name">Freelancer Name *</Label>
+                            <Input
+                                id="freelancer_name"
+                                value={newReview.freelancer_name}
+                                onChange={(e) => setNewReview({ ...newReview, freelancer_name: e.target.value })}
+                                placeholder="Enter freelancer name"
+                                className="mt-1"
+                            />
+                        </div>
+
+                        {/* Reviewer Role */}
+                        <div>
+                            <Label htmlFor="reviewer_role">Who is leaving the review? *</Label>
+                            <select
+                                id="reviewer_role"
+                                value={newReview.reviewer_role}
+                                onChange={(e) => setNewReview({ ...newReview, reviewer_role: e.target.value as 'Freelancer' | 'Employer' })}
+                                className="w-full h-9 px-3 py-1 mt-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value="Employer">Employer (reviewing Freelancer)</option>
+                                <option value="Freelancer">Freelancer (reviewing Employer)</option>
+                            </select>
+                        </div>
+
+                        {/* Rating */}
+                        <div>
+                            <Label htmlFor="rating">Rating *</Label>
+                            <select
+                                id="rating"
+                                value={newReview.rating}
+                                onChange={(e) => setNewReview({ ...newReview, rating: parseInt(e.target.value) })}
+                                className="w-full h-9 px-3 py-1 mt-1 text-sm border border-gray-300 rounded-md bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            >
+                                <option value={5}>⭐⭐⭐⭐⭐ 5 Stars - Excellent</option>
+                                <option value={4}>⭐⭐⭐⭐ 4 Stars - Good</option>
+                                <option value={3}>⭐⭐⭐ 3 Stars - Average</option>
+                                <option value={2}>⭐⭐ 2 Stars - Poor</option>
+                                <option value={1}>⭐ 1 Star - Very Poor</option>
+                            </select>
+                        </div>
+
+                        {/* Comment */}
+                        <div>
+                            <Label htmlFor="comment">Comment *</Label>
+                            <textarea
+                                id="comment"
+                                value={newReview.comment}
+                                onChange={(e) => setNewReview({ ...newReview, comment: e.target.value })}
+                                placeholder="Enter detailed review comment..."
+                                rows={4}
+                                className="w-full px-3 py-2 mt-1 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                            />
+                        </div>
+                    </div>
+
+                    <DialogFooter>
+                        <Button variant="outline" onClick={() => setIsModalOpen(false)}>
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={handleAddReview}
+                            disabled={
+                                !newReview.project_title ||
+                                !newReview.employer_name ||
+                                !newReview.freelancer_name ||
+                                !newReview.comment
+                            }
+                        >
+                            Add Review
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
-        <div className="flex gap-2">
-          <button
-            onClick={() => handlePageChange((params.page || 1) - 1)}
-            disabled={params.page === 1}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-          >
-            Previous
-          </button>
-          <button
-            onClick={() => handlePageChange((params.page || 1) + 1)}
-            disabled={params.page === data?.pagination.totalPages}
-            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
-          >
-            Next
-          </button>
-        </div>
-      </div>
-    </div>
-  );
+    )
 }

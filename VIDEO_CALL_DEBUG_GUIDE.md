@@ -3,6 +3,7 @@
 ## 🐛 Improvements Made
 
 ### 1. **Enhanced ICE Servers Configuration**
+
 Added multiple STUN and TURN servers for better NAT traversal:
 
 ```typescript
@@ -14,7 +15,7 @@ const ICE_SERVERS = {
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
     { urls: "stun:stun4.l.google.com:19302" },
-    
+
     // FREE TURN servers for NAT traversal
     {
       urls: "turn:openrelay.metered.ca:80",
@@ -37,6 +38,7 @@ const ICE_SERVERS = {
 ```
 
 **Why this matters:**
+
 - **STUN servers**: Help discover your public IP address (works on same network)
 - **TURN servers**: Relay traffic when direct P2P connection fails (needed for different networks/firewalls)
 - **Multiple servers**: Provides redundancy and failover options
@@ -44,6 +46,7 @@ const ICE_SERVERS = {
 ---
 
 ### 2. **Improved Media Constraints**
+
 Enhanced audio settings for better quality and echo cancellation:
 
 ```typescript
@@ -54,9 +57,9 @@ const stream = await navigator.mediaDevices.getUserMedia({
     facingMode: "user",
   },
   audio: {
-    echoCancellation: true,  // Prevents echo feedback
-    noiseSuppression: true,   // Reduces background noise
-    autoGainControl: true,    // Normalizes audio levels
+    echoCancellation: true, // Prevents echo feedback
+    noiseSuppression: true, // Reduces background noise
+    autoGainControl: true, // Normalizes audio levels
   },
 });
 ```
@@ -64,9 +67,11 @@ const stream = await navigator.mediaDevices.getUserMedia({
 ---
 
 ### 3. **Comprehensive Logging**
+
 Added detailed console logs throughout the WebRTC flow:
 
 #### **Call Flow Logging:**
+
 ```
 📞 Initiating call to: user123
 🔄 Creating call session via API...
@@ -78,6 +83,7 @@ Added detailed console logs throughout the WebRTC flow:
 ```
 
 #### **Media Track Logging:**
+
 ```
 ✅ Got media stream: {
   id: "stream-123",
@@ -102,6 +108,7 @@ Added detailed console logs throughout the WebRTC flow:
 ```
 
 #### **ICE Candidate Logging:**
+
 ```
 🧊 Sending ICE candidate: {
   type: "host",
@@ -116,6 +123,7 @@ Added detailed console logs throughout the WebRTC flow:
 ```
 
 #### **Connection State Logging:**
+
 ```
 🧊 ICE gathering state: gathering
 🧊 ICE connection state: checking
@@ -128,11 +136,13 @@ Added detailed console logs throughout the WebRTC flow:
 ## 🧪 How to Debug
 
 ### **Step 1: Open Browser Console**
+
 On both machines, open Developer Tools (F12) and check Console tab.
 
 ### **Step 2: Look for These Patterns**
 
 #### ✅ **Successful Connection:**
+
 ```
 📞 Initiating call...
 ✅ User media obtained
@@ -146,6 +156,7 @@ On both machines, open Developer Tools (F12) and check Console tab.
 ```
 
 #### ❌ **Failed Connection (No TURN):**
+
 ```
 🧊 ICE gathering state: gathering
 🧊 Sending ICE candidate: type: "host"
@@ -156,6 +167,7 @@ On both machines, open Developer Tools (F12) and check Console tab.
 ```
 
 #### ⚠️ **One-Way Video (Firewall Issue):**
+
 ```
 Machine A: ✅ Connected
 Machine B: 🧊 ICE connection state: checking (stuck)
@@ -164,6 +176,7 @@ Machine B: 🧊 ICE connection state: checking (stuck)
 ```
 
 #### 🔇 **No Audio:**
+
 ```
 📹 Track audio: {
   enabled: true,
@@ -178,12 +191,15 @@ Machine B: 🧊 ICE connection state: checking (stuck)
 ## 🔧 Common Issues & Solutions
 
 ### **Issue 1: No Connection Between Different Networks**
+
 **Symptoms:**
+
 - Works on same WiFi
 - Fails across different networks
 - ICE state stuck on "checking"
 
 **Solution:**
+
 - ✅ **Already Fixed!** TURN servers added
 - If still fails, TURN servers might be overloaded
 - Consider using paid TURN servers (Twilio, Xirsys)
@@ -191,11 +207,14 @@ Machine B: 🧊 ICE connection state: checking (stuck)
 ---
 
 ### **Issue 2: Audio Not Working**
+
 **Symptoms:**
+
 - Video works fine
 - No audio on either side
 
 **Checklist:**
+
 1. ✅ Check browser permissions (microphone access)
 2. ✅ Verify audio track in logs: `audioTracks: 1`
 3. ✅ Check if audio track is `enabled: true, muted: false`
@@ -203,26 +222,38 @@ Machine B: 🧊 ICE connection state: checking (stuck)
 5. ✅ Test microphone in other apps (ensure hardware works)
 
 **Debug Command:**
+
 ```javascript
 // In browser console, check local stream:
-localStreamRef.current?.getAudioTracks().forEach(track => {
-  console.log('Audio track:', track.label, 'enabled:', track.enabled, 'muted:', track.muted);
+localStreamRef.current?.getAudioTracks().forEach((track) => {
+  console.log(
+    "Audio track:",
+    track.label,
+    "enabled:",
+    track.enabled,
+    "muted:",
+    track.muted
+  );
 });
 ```
 
 ---
 
 ### **Issue 3: One-Way Video**
+
 **Symptoms:**
+
 - User A sees User B's camera
 - User B sees nothing
 
 **Possible Causes:**
+
 1. **Asymmetric NAT**: One side can receive but not send
 2. **Firewall**: Blocking incoming connections on one side
 3. **Track not added**: Remote track not attached to video element
 
 **Debug:**
+
 ```
 Machine A (sender):
 ✅ Adding video track to peer connection
@@ -234,6 +265,7 @@ Machine B (receiver):
 ```
 
 **Solution:**
+
 - ✅ **Already Fixed!** Added comprehensive track logging
 - Check if `pc.ontrack` event fires on receiver
 - Verify remote stream is attached to `<video>` element
@@ -241,16 +273,20 @@ Machine B (receiver):
 ---
 
 ### **Issue 4: Connection Drops After Few Seconds**
+
 **Symptoms:**
+
 - Call connects successfully
 - Drops after 5-30 seconds
 
 **Possible Causes:**
+
 1. **ICE restart needed**: Connection state changed
 2. **TURN server timeout**: Free TURN servers have limits
 3. **Network switch**: Device changed WiFi/cellular
 
 **Debug:**
+
 ```
 🔗 Connection state: connected
 🔗 Connection state: disconnected  ← Connection lost
@@ -258,6 +294,7 @@ Machine B (receiver):
 ```
 
 **Solution:**
+
 - Implement ICE restart mechanism (not yet done)
 - Use paid TURN servers for production
 - Add connection quality monitoring
@@ -267,6 +304,7 @@ Machine B (receiver):
 ## 📊 Testing Checklist
 
 ### **Before Testing:**
+
 - [ ] Clear browser cache
 - [ ] Grant camera/microphone permissions
 - [ ] Check firewall settings (allow WebRTC ports)
@@ -275,16 +313,19 @@ Machine B (receiver):
 ### **Test Scenarios:**
 
 #### **Scenario 1: Same Network**
+
 - [ ] Both users on same WiFi
 - [ ] Expected: Direct P2P connection (host candidates)
 - [ ] Check logs: Should see `type: "host"` candidates only
 
 #### **Scenario 2: Different Networks**
+
 - [ ] Users on different WiFi/cellular
 - [ ] Expected: STUN/TURN relay connection
 - [ ] Check logs: Should see `type: "srflx"` or `type: "relay"` candidates
 
 #### **Scenario 3: Behind Corporate Firewall**
+
 - [ ] One user behind strict firewall
 - [ ] Expected: TURN relay required
 - [ ] Check logs: Should eventually use `type: "relay"` candidates
@@ -294,7 +335,9 @@ Machine B (receiver):
 ## 🚀 Next Steps If Still Not Working
 
 ### **1. Verify TURN Servers Are Working**
+
 Test with this command:
+
 ```bash
 # Install webrtc-testing-tool
 npm install -g webrtc-testing-tool
@@ -304,9 +347,11 @@ webrtc-test --turn turn:openrelay.metered.ca:80 --username openrelayproject --cr
 ```
 
 ### **2. Use Alternative TURN Servers**
+
 If openrelay.metered.ca is overloaded, try these:
 
 #### **Twilio (Free Tier)**
+
 ```typescript
 {
   urls: "turn:global.turn.twilio.com:3478?transport=udp",
@@ -316,6 +361,7 @@ If openrelay.metered.ca is overloaded, try these:
 ```
 
 #### **Xirsys (Free Trial)**
+
 ```typescript
 {
   urls: "turn:xirsys-turn-server.com:80?transport=tcp",
@@ -325,16 +371,20 @@ If openrelay.metered.ca is overloaded, try these:
 ```
 
 ### **3. Check Backend Socket.IO**
+
 Ensure signaling server properly relays messages:
+
 ```javascript
 // Backend should log:
-console.log('Forwarding offer to:', data.to);
-console.log('Forwarding answer to:', data.to);
-console.log('Forwarding ICE candidate to:', data.to);
+console.log("Forwarding offer to:", data.to);
+console.log("Forwarding answer to:", data.to);
+console.log("Forwarding ICE candidate to:", data.to);
 ```
 
 ### **4. Network Diagnostics**
+
 Check if ports are blocked:
+
 ```bash
 # Test UDP ports (WebRTC uses UDP)
 nc -u -v -z openrelay.metered.ca 80
@@ -350,6 +400,7 @@ stunclient stun.l.google.com 19302
 ### **Complete Successful Call Flow:**
 
 **Machine A (Caller):**
+
 ```
 📞 Initiating call to: userB
 ✅ Call session created
@@ -373,6 +424,7 @@ stunclient stun.l.google.com 19302
 ```
 
 **Machine B (Receiver):**
+
 ```
 📲 Incoming call from: userA
 ✅ Accepting call
@@ -398,15 +450,15 @@ stunclient stun.l.google.com 19302
 
 ## 🎯 Summary of Changes
 
-| Component | Before | After | Impact |
-|-----------|--------|-------|--------|
-| **STUN servers** | 2 servers | 5 servers | Better redundancy |
-| **TURN servers** | ❌ None | ✅ 3 configs | Works across networks |
-| **Audio constraints** | Basic | Enhanced (echo cancel, noise suppress) | Better quality |
-| **Logging** | Minimal | Comprehensive | Easy debugging |
-| **Media track info** | None | Detailed | Track issues faster |
-| **ICE candidate info** | Basic | Full details | Diagnose connectivity |
-| **Connection states** | Limited | All states logged | Monitor health |
+| Component              | Before    | After                                  | Impact                |
+| ---------------------- | --------- | -------------------------------------- | --------------------- |
+| **STUN servers**       | 2 servers | 5 servers                              | Better redundancy     |
+| **TURN servers**       | ❌ None   | ✅ 3 configs                           | Works across networks |
+| **Audio constraints**  | Basic     | Enhanced (echo cancel, noise suppress) | Better quality        |
+| **Logging**            | Minimal   | Comprehensive                          | Easy debugging        |
+| **Media track info**   | None      | Detailed                               | Track issues faster   |
+| **ICE candidate info** | Basic     | Full details                           | Diagnose connectivity |
+| **Connection states**  | Limited   | All states logged                      | Monitor health        |
 
 ---
 
@@ -424,6 +476,7 @@ stunclient stun.l.google.com 19302
 ## 📞 Support
 
 If issues persist after checking all logs:
+
 1. Share console logs from both machines
 2. Note exact error messages
 3. Specify network setup (WiFi, cellular, VPN, corporate)
