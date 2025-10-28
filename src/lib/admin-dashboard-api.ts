@@ -17,7 +17,7 @@ import type {
 } from "@/types/admin";
 
 // Base URL cho Admin Dashboard API - sử dụng localhost để test
-const ADMIN_API_BASE_URL = "http://localhost:5000/api";
+const ADMIN_API_BASE_URL = "http://14.169.15.9:3003/api";
 
 // Tạo axios instance cho Admin API
 const adminApiClient = axios.create({
@@ -62,7 +62,7 @@ adminApiClient.interceptors.response.use(
 );
 
 // Helper function để build query string
-const buildQueryString = (params: Record<string, any>): string => {
+const buildQueryString = (params: Record<string, unknown>): string => {
   const searchParams = new URLSearchParams();
   Object.entries(params).forEach(([key, value]) => {
     if (value !== undefined && value !== null && value !== "") {
@@ -83,7 +83,7 @@ export const adminDashboardApi = {
   getOverview: async (
     params?: OverviewParams
   ): Promise<ApiResponse<DashboardOverview>> => {
-    const queryString = params ? `?${buildQueryString(params)}` : "";
+    const queryString = params ? `?${buildQueryString(params as Record<string, unknown>)}` : "";
     const response = await adminApiClient.get(
       `/admin/dashboard/overview${queryString}`
     );
@@ -97,7 +97,7 @@ export const adminDashboardApi = {
   getRevenue: async (
     params?: RevenueParams
   ): Promise<ApiResponse<RevenueData>> => {
-    const queryString = params ? `?${buildQueryString(params)}` : "";
+    const queryString = params ? `?${buildQueryString(params as Record<string, unknown>)}` : "";
     const response = await adminApiClient.get(
       `/admin/dashboard/revenue${queryString}`
     );
@@ -111,7 +111,7 @@ export const adminDashboardApi = {
   getRevenueChart: async (
     params?: RevenueChartParams
   ): Promise<ApiResponse<RevenueChartData>> => {
-    const queryString = params ? `?${buildQueryString(params)}` : "";
+    const queryString = params ? `?${buildQueryString(params as Record<string, unknown>)}` : "";
     const response = await adminApiClient.get(
       `/admin/dashboard/revenue/chart${queryString}`
     );
@@ -123,7 +123,7 @@ export const adminDashboardApi = {
    * GET /admin/dashboard/users
    */
   getUsers: async (params?: UsersParams): Promise<ApiResponse<UsersData>> => {
-    const queryString = params ? `?${buildQueryString(params)}` : "";
+    const queryString = params ? `?${buildQueryString(params as Record<string, unknown>)}` : "";
     const response = await adminApiClient.get(
       `/admin/dashboard/users${queryString}`
     );
@@ -137,7 +137,7 @@ export const adminDashboardApi = {
   getTransactions: async (
     params?: TransactionsParams
   ): Promise<ApiResponse<TransactionsData>> => {
-    const queryString = params ? `?${buildQueryString(params)}` : "";
+    const queryString = params ? `?${buildQueryString(params as Record<string, unknown>)}` : "";
     const response = await adminApiClient.get(
       `/admin/dashboard/transactions${queryString}`
     );
@@ -151,7 +151,7 @@ export const adminDashboardApi = {
   getReviews: async (
     params?: ReviewsParams
   ): Promise<ApiResponse<ReviewsData>> => {
-    const queryString = params ? `?${buildQueryString(params)}` : "";
+    const queryString = params ? `?${buildQueryString(params as Record<string, unknown>)}` : "";
     const response = await adminApiClient.get(
       `/admin/dashboard/reviews${queryString}`
     );
