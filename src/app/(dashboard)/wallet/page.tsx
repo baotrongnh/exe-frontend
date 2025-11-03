@@ -56,7 +56,7 @@ export default function WalletPage() {
         } catch (error: unknown) {
             const err = error as { response?: { status?: number; statusText?: string; data?: unknown }; message?: string }
             console.error("❌ Error fetching transactions:", error)
-            
+
             if (err?.response?.status !== 404) {
                 showToast("Failed to load transactions", "error")
             }
@@ -105,7 +105,7 @@ export default function WalletPage() {
                     </div>
 
                     <div className="md:col-span-2">
-                        <TransactionList 
+                        <TransactionList
                             transactions={transactions}
                             loading={loading}
                             onRetry={fetchTransactions}

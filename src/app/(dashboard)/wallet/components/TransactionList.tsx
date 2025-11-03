@@ -128,11 +128,10 @@ export function TransactionList({ transactions, loading, onRetry }: TransactionL
                                 </div>
                                 <div className="text-right space-y-1">
                                     <p
-                                        className={`font-bold text-lg ${
-                                            isIncomeTransaction(transaction.transaction_type)
+                                        className={`font-bold text-lg ${isIncomeTransaction(transaction.transaction_type)
                                                 ? "text-green-600"
                                                 : "text-red-600"
-                                        }`}
+                                            }`}
                                     >
                                         {isIncomeTransaction(transaction.transaction_type) ? "+" : "-"}
                                         {formatCurrency(transaction.amount)}
