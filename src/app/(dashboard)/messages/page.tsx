@@ -358,16 +358,18 @@ export default function Messages({ basePath = "" }: MessagesProps) {
           // Find and set candidate info from thread data
           const thread = threads.find((t) => t.id === selectedThreadId);
           console.log('📋 Selected thread data:', thread);
+          console.log('🖼️ Avatar URL from thread:', thread?.candidateAvatar);
           if (thread) {
             // Create candidate object directly from thread data
             const candidate: Candidate = {
               id: thread.candidateId,
               name: thread.candidateName,
               title: thread.candidateTitle,
-              avatar: thread.candidateAvatar,
+              avatar: thread.candidateAvatar || '', // Keep empty string if no avatar
               profileUrl: `/candidates/${thread.candidateId}`
             };
             console.log('👤 Created candidate from thread:', candidate);
+            console.log('👤 Candidate avatar value:', candidate.avatar);
             setSelectedCandidate(candidate);
 
             // Mark messages as read when conversation is opened

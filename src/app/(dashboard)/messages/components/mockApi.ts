@@ -234,6 +234,15 @@ const mockApiMessages: Record<string, ApiMessage[]> = {
 function transformConversationToThread(conversation: ApiConversation): MessageThread {
     const unreadCount = conversation.lastMessage?.is_read ? 0 : 1
 
+    // Debug avatar handling
+    console.log('🖼️ Transforming conversation - Avatar data:', {
+        conversationId: conversation.id,
+        otherUserId: conversation.otherUser?.id,
+        otherUserName: conversation.otherUser?.full_name,
+        avatar_url: conversation.otherUser?.avatar_url,
+        fullOtherUser: conversation.otherUser
+    })
+
     return {
         id: conversation.id,
         candidateId: conversation.otherUser?.id || '',

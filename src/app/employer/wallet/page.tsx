@@ -157,185 +157,199 @@ export default function WalletPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      {/* Debug Panel */}
-      <div className="bg-slate-100 dark:bg-slate-900 p-4 rounded-lg border border-dashed">
-        <p className="text-sm font-medium mb-2">🔧 Debug Panel</p>
-        <div className="flex gap-2 flex-wrap">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              console.log("=== Testing Wallet API ===");
-              fetchTransactions();
-            }}
-          >
-            🔄 Refresh Transactions
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              console.log("=== Testing /api/wallet ===");
-              try {
-                const data = await api.wallet.get();
-                console.log("✅ Wallet API success:", data);
-              } catch (error) {
-                console.error("❌ Wallet API error:", error);
-              }
-            }}
-          >
-            📊 Test Wallet API
-          </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={async () => {
-              console.log("=== Testing /api/wallet/balance ===");
-              try {
-                const data = await api.wallet.getBalance();
-                console.log("✅ Balance API success:", data);
-              } catch (error) {
-                console.error("❌ Balance API error:", error);
-              }
-            }}
-          >
-            💰 Test Balance API
-          </Button>
-          <p className="text-xs text-muted-foreground self-center">
-            Open DevTools Console (F12) to see API responses
-          </p>
-        </div>
-      </div>
-
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold">Wallet Management</h1>
-          <p className="text-muted-foreground">
-            Manage your wallet and view transaction history
-          </p>
-        </div>
-        <Button
-          onClick={handleDeposit}
-          size="lg"
-          className="gap-2"
-          disabled={loadingDeposit}
-        >
-          {loadingDeposit ? (
-            <>
-              <Loader2 className="h-5 w-5 animate-spin" />
-              Đang xử lý...
-            </>
-          ) : (
-            <>
-              <Plus className="h-5 w-5" />
-              Nạp tiền
-            </>
-          )}
-        </Button>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-3">
-        <div className="md:col-span-1">
-          <WalletCard />
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 sm:p-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* Debug Panel */}
+        <div className="bg-gradient-to-r from-slate-50 to-slate-100 p-4 rounded-xl border border-slate-200 shadow-sm">
+          <p className="text-sm font-medium mb-2">🔧 Debug Panel</p>
+          <div className="flex gap-2 flex-wrap">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                console.log("=== Testing Wallet API ===");
+                fetchTransactions();
+              }}
+            >
+              🔄 Refresh Transactions
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                console.log("=== Testing /api/wallet ===");
+                try {
+                  const data = await api.wallet.get();
+                  console.log("✅ Wallet API success:", data);
+                } catch (error) {
+                  console.error("❌ Wallet API error:", error);
+                }
+              }}
+            >
+              📊 Test Wallet API
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                console.log("=== Testing /api/wallet/balance ===");
+                try {
+                  const data = await api.wallet.getBalance();
+                  console.log("✅ Balance API success:", data);
+                } catch (error) {
+                  console.error("❌ Balance API error:", error);
+                }
+              }}
+            >
+              💰 Test Balance API
+            </Button>
+            <p className="text-xs text-muted-foreground self-center">
+              Open DevTools Console (F12) to see API responses
+            </p>
+          </div>
         </div>
 
-        <div className="md:col-span-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Transaction History</CardTitle>
-              <CardDescription>
-                View all your wallet transactions
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {loading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-                </div>
-              ) : !Array.isArray(transactions) ? (
-                <div className="text-center py-8 space-y-3">
-                  <p className="text-destructive font-medium">⚠️ Data Error</p>
-                  <p className="text-sm text-muted-foreground">
-                    Transactions data is not in the correct format
-                  </p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      console.log("Current transactions:", transactions);
-                      console.log("Is array:", Array.isArray(transactions));
-                      fetchTransactions();
-                    }}
-                  >
-                    🔄 Retry
-                  </Button>
-                </div>
-              ) : transactions.length === 0 ? (
-                <div className="space-y-4">
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p className="mb-2">No transactions found</p>
-                    <p className="text-xs">
-                      Transactions will appear here after you make deposits or
-                      payments
+        {/* Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">Wallet Management</h1>
+            <p className="text-gray-600 flex items-center gap-2">
+              <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z" />
+              </svg>
+              Manage your wallet and view transaction history
+            </p>
+          </div>
+          <Button
+            onClick={handleDeposit}
+            size="lg"
+            className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-xl transition-all"
+            disabled={loadingDeposit}
+          >
+            {loadingDeposit ? (
+              <>
+                <Loader2 className="h-5 w-5 animate-spin" />
+                Đang xử lý...
+              </>
+            ) : (
+              <>
+                <Plus className="h-5 w-5" />
+                Nạp tiền
+              </>
+            )}
+          </Button>
+        </div>
+
+        <div className="grid gap-6 md:grid-cols-3">
+          <div className="md:col-span-1">
+            <WalletCard />
+          </div>
+
+          <div className="md:col-span-2">
+            <Card className="border-gray-200 shadow-lg">
+              <CardHeader className="bg-gradient-to-r from-white to-gray-50 border-b border-gray-200">
+                <CardTitle className="text-2xl font-bold text-gray-900">Transaction History</CardTitle>
+                <CardDescription className="text-gray-600">
+                  View all your wallet transactions
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="p-6">
+                {loading ? (
+                  <div className="flex flex-col items-center justify-center py-16">
+                    <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mb-4" />
+                    <p className="text-gray-600 font-medium">Loading transactions...</p>
+                  </div>
+                ) : !Array.isArray(transactions) ? (
+                  <div className="text-center py-12 space-y-4">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
+                      <svg className="w-8 h-8 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                      </svg>
+                    </div>
+                    <p className="text-red-600 font-semibold text-lg">⚠️ Data Error</p>
+                    <p className="text-gray-600">
+                      Transactions data is not in the correct format
+                    </p>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        console.log("Current transactions:", transactions);
+                        console.log("Is array:", Array.isArray(transactions));
+                        fetchTransactions();
+                      }}
+                      className="mt-4"
+                    >
+                      🔄 Retry
+                    </Button>
+                  </div>
+                ) : transactions.length === 0 ? (
+                  <div className="text-center py-16">
+                    <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                      <svg className="w-10 h-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No transactions found</h3>
+                    <p className="text-gray-600">
+                      Transactions will appear here after you make deposits or payments
                     </p>
                   </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {Array.isArray(transactions) &&
-                    transactions.map((transaction) => (
-                      <div
-                        key={transaction.id}
-                        className="flex items-center justify-between p-4 rounded-lg border"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="p-2 rounded-full bg-muted">
-                            {getTransactionIcon(transaction.transaction_type)}
-                          </div>
-                          <div>
-                            <p className="font-medium capitalize">
-                              {transaction.transaction_type}
-                            </p>
-                            {transaction.description && (
-                              <p className="text-sm text-muted-foreground">
-                                {transaction.description}
+                ) : (
+                  <div className="space-y-3">
+                    {Array.isArray(transactions) &&
+                      transactions.map((transaction) => (
+                        <div
+                          key={transaction.id}
+                          className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-gradient-to-r hover:from-indigo-50/30 hover:to-transparent transition-all duration-200"
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className="p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 shadow-sm">
+                              {getTransactionIcon(transaction.transaction_type)}
+                            </div>
+                            <div>
+                              <p className="font-semibold capitalize text-gray-900">
+                                {transaction.transaction_type}
                               </p>
-                            )}
-                            <p className="text-xs text-muted-foreground">
-                              {new Date(transaction.created_at).toLocaleString(
-                                "vi-VN"
+                              {transaction.description && (
+                                <p className="text-sm text-gray-600">
+                                  {transaction.description}
+                                </p>
                               )}
+                              <p className="text-xs text-gray-500">
+                                {new Date(transaction.created_at).toLocaleString(
+                                  "vi-VN"
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                          <div className="text-right space-y-1">
+                            <p
+                              className={`font-bold text-lg ${transaction.transaction_type?.toUpperCase() ===
+                                  "DEPOSIT" ||
+                                  transaction.transaction_type?.toUpperCase() ===
+                                  "REFUND"
+                                  ? "text-green-600"
+                                  : "text-red-600"
+                                }`}
+                            >
+                              {transaction.transaction_type?.toUpperCase() ===
+                                "DEPOSIT" ||
+                                transaction.transaction_type?.toUpperCase() ===
+                                "REFUND"
+                                ? "+"
+                                : "-"}
+                              {formatCurrency(transaction.amount)}
                             </p>
+                            {getStatusBadge(transaction.status)}
                           </div>
                         </div>
-                        <div className="text-right space-y-1">
-                          <p
-                            className={`font-semibold ${
-                              transaction.transaction_type?.toUpperCase() ===
-                                "DEPOSIT" ||
-                              transaction.transaction_type?.toUpperCase() ===
-                                "REFUND"
-                                ? "text-green-600"
-                                : "text-red-600"
-                            }`}
-                          >
-                            {transaction.transaction_type?.toUpperCase() ===
-                              "DEPOSIT" ||
-                            transaction.transaction_type?.toUpperCase() ===
-                              "REFUND"
-                              ? "+"
-                              : "-"}
-                            {formatCurrency(transaction.amount)}
-                          </p>
-                          {getStatusBadge(transaction.status)}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </div>
       </div>
     </div>

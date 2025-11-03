@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { supabase } from "./supabase";
 
 // Base URL cho API backend
-const API_BASE_URL = "http://14.169.15.9:3003"; // Backend API base URL
+export const API_BASE_URL = "http://14.169.52.232:3003"; // Backend API base URL
 const CV_API_BASE_URL = "http://14.169.15.9:3003/api";
 const VIDEO_CALL_API_BASE_URL = "http://14.169.15.9:3003"; // Video Call API base URL
 
@@ -652,6 +652,77 @@ export const api = {
       const response = await videoCallApiClient.get(
         `/api/video/calls/${callId}`
       );
+      return response.data;
+    },
+  },
+
+  // Deliverables APIs
+  deliverables: {
+    // Get all deliverables (for employer - all jobs)
+    getAll: async (params?: { page?: number; limit?: number; status?: string }) => {
+      const response = await apiClient.get("/api/deliverables", { params });
+      return response.data;
+    },
+
+    // Get deliverables for a specific job
+    getByJob: async (jobId: string, params?: { page?: number; limit?: number }) => {
+      const response = await apiClient.get(`/api/jobs/${jobId}/deliverables`, { params });
+      return response.data;
+    },
+
+    // Get a specific deliverable
+    getById: async (id: string) => {
+      const response = await apiClient.get(`/api/deliverables/${id}`);
+      return response.data;
+    },
+
+    // Submit a deliverable (freelancer)
+    submit: async (data: {
+      job_id: string;
+      title: string;
+      description: string;
+      files: File[];
+    }) => {
+      const formData = new FormData();
+      formData.append("job_id", data.job_id);
+      formData.append("title", data.title);
+      formData.append("description", data.description);
+
+      data.files.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      const response = await apiClient.post("/api/deliverables", formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+      return response.data;
+    },
+
+    // Approve a deliverable (employer)
+    approve: async (id: string) => {
+      const response = await apiClient.patch(`/api/deliverables/${id}/approve`);
+      return response.data;
+    },
+
+    // Reject a deliverable (employer)
+    reject: async (id: string, data: { reason: string }) => {
+      const response = await apiClient.patch(`/api/deliverables/${id}/reject`, data);
+      return response.data;
+    },
+
+    // Request revision (employer)
+    requestRevision: async (id: string, data: { notes: string }) => {
+      const response = await apiClient.patch(`/api/deliverables/${id}/revision`, data);
+      return response.data;
+    },
+
+    // Download deliverable file
+    downloadFile: async (id: string, fileName: string) => {
+      const response = await apiClient.get(`/api/deliverables/${id}/files/${fileName}`, {
+        responseType: "blob",
+      });
       return response.data;
     },
   },

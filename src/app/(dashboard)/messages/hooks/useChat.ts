@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react'
 import { io, Socket } from 'socket.io-client'
 import { supabase } from '@/lib/supabase'
 import { ApiMessage } from '../components/types'
+import { API_BASE_URL } from '@/lib/api'
 
 interface UseChatOptions {
     enabled?: boolean
@@ -97,7 +98,7 @@ export function useChat(options: UseChatOptions = {}) {
                     return
                 }                // Initialize socket connection with better configuration
                 // Use the specified chat server
-                const socketUrl = 'http://14.169.15.9:3003' // Chat server URL
+                const socketUrl = API_BASE_URL // Chat server URL
                 const serverMode = 'production'
 
                 console.log('🔌 Environment detection:', {

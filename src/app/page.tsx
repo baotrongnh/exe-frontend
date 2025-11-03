@@ -2,25 +2,31 @@
 
 import Navbar from "@/components/Navbar"
 import Link from "next/link"
-import { useState } from "react"
+import Image from "next/image"
+import { useState, FormEvent } from "react"
+
+interface SearchData {
+  searchTerm: string
+  location: string
+}
 
 // Empty functions for implementation
-function handleSearch(searchData : any) {
+function handleSearch(searchData: SearchData) {
   console.log("[v0] Search data:", searchData)
   // Implement search functionality here
 }
 
-function handleCategoryClick(category : any) {
+function handleCategoryClick(category: string) {
   console.log("[v0] Category clicked:", category)
   // Implement category navigation here
 }
 
-function handleJobClick(jobId : any) {
+function handleJobClick(jobId: number) {
   console.log("[v0] Job clicked:", jobId)
   // Implement job details navigation here
 }
 
-function handleNewsletterSignup(email : any) {
+function handleNewsletterSignup(email: string) {
   console.log("[v0] Newsletter signup:", email)
   // Implement newsletter signup here
 }
@@ -30,12 +36,12 @@ export default function LandingPage() {
   const [location, setLocation] = useState("Florence, Italy")
   const [email, setEmail] = useState("")
 
-  const onSearch = (e : any) => {
+  const onSearch = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     handleSearch({ searchTerm, location })
   }
 
-  const onNewsletterSubmit = (e : any) => {
+  const onNewsletterSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     handleNewsletterSignup(email)
     setEmail("")
@@ -45,8 +51,8 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white">
 
       <Navbar />
-      
-      
+
+
       {/* Hero Section */}
       <section className="relative px-6 py-4 bg-gradient-to-br from-purple-50 via-blue-50 to-purple-100 overflow-hidden min-h-screen">
         <div className="absolute inset-0 overflow-hidden">
@@ -137,9 +143,11 @@ export default function LandingPage() {
 
             <div className="relative flex justify-center lg:justify-end">
               <div className="relative">
-                <img
+                <Image
                   src="/images/professional-man.png"
                   alt="Professional man pointing"
+                  width={448}
+                  height={600}
                   className="w-full max-w-md h-auto relative z-10"
                 />
                 {/* Stats card */}
@@ -165,7 +173,7 @@ export default function LandingPage() {
                       <div className="font-bold text-sm text-gray-900">Karen Sandler</div>
                       <div className="text-xs text-gray-600 mb-2">Lead Engineer at Canva</div>
                       <div className="text-sm text-gray-700 italic">
-                        "Great platform for the job seeker that searching for new career heights."
+                        &ldquo;Great platform for the job seeker that searching for new career heights.&rdquo;
                       </div>
                     </div>
                   </div>
@@ -289,9 +297,11 @@ export default function LandingPage() {
               </button>
             </div>
             <div>
-              <img
+              <Image
                 src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-2FVncIPuQfdBsYXDUolZXajVDCSY2B.png"
                 alt="Dashboard preview"
+                width={800}
+                height={600}
                 className="w-full h-auto"
               />
             </div>
@@ -355,10 +365,10 @@ export default function LandingPage() {
                     <span
                       key={index}
                       className={`px-3 py-1 rounded-full text-xs font-medium ${tag === "Marketing"
-                          ? "bg-orange-100 text-orange-600"
-                          : tag === "Design"
-                            ? "bg-purple-100 text-purple-600"
-                            : "bg-blue-100 text-blue-600"
+                        ? "bg-orange-100 text-orange-600"
+                        : tag === "Design"
+                          ? "bg-purple-100 text-purple-600"
+                          : "bg-blue-100 text-blue-600"
                         }`}
                     >
                       {tag}
@@ -477,12 +487,12 @@ export default function LandingPage() {
                     <span
                       key={index}
                       className={`px-3 py-1 rounded-full text-xs font-medium ${tag === "Part Time"
-                          ? "bg-green-100 text-green-600"
-                          : tag === "Marketing"
-                            ? "bg-orange-100 text-orange-600"
-                            : tag === "Design"
-                              ? "bg-purple-100 text-purple-600"
-                              : "bg-blue-100 text-blue-600"
+                        ? "bg-green-100 text-green-600"
+                        : tag === "Marketing"
+                          ? "bg-orange-100 text-orange-600"
+                          : tag === "Design"
+                            ? "bg-purple-100 text-purple-600"
+                            : "bg-blue-100 text-blue-600"
                         }`}
                     >
                       {tag}
