@@ -1,17 +1,19 @@
 "use client"
 
 import Link from "next/link"
-import { usePathname } from "next/navigation"
-import { LayoutDashboard, MessageSquare, FileText, Search, Building2, User, Settings, HelpCircle, FileUser } from "lucide-react"
+import { usePathname, useRouter } from "next/navigation"
+import { LayoutDashboard, MessageSquare, FileText, Search, Building2, User, Settings, HelpCircle, FileUser, LogOut } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { supabase } from "@/lib/supabase"
 
 const navItems = [
      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
      { href: "/messages", label: "Messages", icon: MessageSquare, badge: 1 },
      { href: "/my-applications", label: "My Applications", icon: FileText },
      { href: "/find-jobs", label: "Find Jobs", icon: Search },
-     { href: "/employers", label: "Browse Employers", icon: Building2 },
+     { href: "/browse-employers", label: "Browse Employers", icon: Building2 },
      { href: "/my-profile", label: "My Profile", icon: User },
      { href: "/my-cv", label: "My CV", icon: FileUser },
 ]
@@ -23,6 +25,16 @@ const settingsItems = [
 
 export function DashboardSidebar() {
      const pathname = usePathname()
+     const router = useRouter()
+
+     const handleSignOut = async () => {
+          try {
+               await supabase.auth.signOut()
+               router.push("/login")
+          } catch (error) {
+               console.error("Error signing out:", error)
+          }
+     }
 
      return (
           <aside className="w-64 bg-card border-r border-border h-screen flex flex-col">
@@ -81,7 +93,7 @@ export function DashboardSidebar() {
                </nav>
 
                {/* User Profile */}
-               <div className="p-4 border-t border-border">
+               <div className="p-4 border-t border-border space-y-3">
                     <div className="flex items-center gap-3">
                          <Avatar>
                               <AvatarImage src="/placeholder.svg?height=40&width=40" />
@@ -92,6 +104,14 @@ export function DashboardSidebar() {
                               <p className="text-xs text-muted-foreground truncate">jake@gmail.com</p>
                          </div>
                     </div>
+                    <Button
+                         onClick={handleSignOut}
+                         variant="outline"
+                         className="w-full justify-center items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    >
+                         <LogOut className="w-4 h-4" />
+                         <span className="text-sm font-medium">Sign Out</span>
+                    </Button>
                </div>
           </aside>
      )
