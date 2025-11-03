@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { supabase } from "./supabase";
 
 // Base URL cho API backend
-const API_BASE_URL = "http://14.169.15.9:3003"; // Backend API base URL
+export const API_BASE_URL = "http://14.169.52.232:3003"; // Backend API base URL
 const CV_API_BASE_URL = "http://14.169.15.9:3003/api";
 const VIDEO_CALL_API_BASE_URL = "http://14.169.15.9:3003"; // Video Call API base URL
 
