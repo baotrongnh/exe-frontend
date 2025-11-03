@@ -12,7 +12,7 @@ const navItems = [
      { href: "/my-applications", label: "My Applications", icon: FileText },
      { href: "/find-jobs", label: "Find Jobs", icon: Search },
      { href: "/employers", label: "Browse Employers", icon: Building2 },
-     { href: "/profile", label: "My Public Profile", icon: User },
+     { href: "/my-profile", label: "My Profile", icon: User },
      { href: "/my-cv", label: "My CV", icon: FileUser },
 ]
 
