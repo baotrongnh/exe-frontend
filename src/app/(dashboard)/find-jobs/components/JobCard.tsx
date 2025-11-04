@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
+import { Check } from "lucide-react"
 
 interface Job {
     id: string
@@ -135,17 +136,23 @@ export function JobCard({ job, searchQuery, onApply, isApplying, isApplied }: Jo
                         </div>
                     </div>
                     <div className="text-right flex flex-col gap-2 items-end min-w-[120px]">
-                        <Button
-                            className={
-                                isApplied
-                                    ? "w-full bg-green-600 hover:bg-green-700 text-white"
-                                    : "w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                            }
-                            onClick={(e) => onApply(job.id, e)}
-                            disabled={isApplying || isApplied}
-                        >
-                            {isApplying ? "Applying..." : isApplied ? "Applied" : "Apply"}
-                        </Button>
+                        {isApplied ? (
+                            <Button
+                                className="w-full bg-green-600 hover:bg-green-700 text-white cursor-default"
+                                disabled
+                            >
+                                <Check className="w-4 h-4 mr-1" />
+                                Applied
+                            </Button>
+                        ) : (
+                            <Button
+                                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                                onClick={(e) => onApply(job.id, e)}
+                                disabled={isApplying}
+                            >
+                                {isApplying ? "Applying..." : "Apply"}
+                            </Button>
+                        )}
                         <p className="text-xs text-muted-foreground">
                             <span className="font-semibold text-foreground">{job.applications_count} applied</span>
                         </p>

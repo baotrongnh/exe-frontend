@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Bell, Share2, Check, Briefcase, DollarSign, Calendar, Clock, MapPin } from "lucide-react"
+import { ArrowLeft, Bell, Share2, Check, Briefcase, DollarSign, Calendar, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -50,22 +50,38 @@ export default function JobDetailPage() {
      const [applied, setApplied] = useState(false)
 
      useEffect(() => {
-          const fetchJobDetail = async () => {
+          const fetchData = async () => {
                try {
                     setLoading(true)
                     const response: ApiResponse = await api.jobs.getById(jobId)
                     setJob(response.data)
+
+                    // Check if user has already applied to this job
+                    try {
+                         const applicationsResponse = await api.applications.getAll()
+                         if (applicationsResponse.success && applicationsResponse.data) {
+                              const hasApplied = applicationsResponse.data.some(
+                                   (app: { job_id: string }) => app.job_id === jobId
+                              )
+                              setApplied(hasApplied)
+                         }
+                    } catch (appErr) {
+                         console.error('Error checking application status:', appErr)
+                         // Continue even if check fails
+                    }
+
                     setError(null)
-               } catch (err: any) {
+               } catch (err: unknown) {
                     console.error('Error fetching job detail:', err)
-                    setError(err.message || 'Không thể tải chi tiết công việc')
+                    const errorMessage = err instanceof Error ? err.message : 'Không thể tải chi tiết công việc'
+                    setError(errorMessage)
                } finally {
                     setLoading(false)
                }
           }
 
           if (jobId) {
-               fetchJobDetail()
+               fetchData()
           }
      }, [jobId])
 
@@ -82,9 +98,9 @@ export default function JobDetailPage() {
                     const jobResponse: ApiResponse = await api.jobs.getById(jobId)
                     setJob(jobResponse.data)
                }
-          } catch (err: any) {
+          } catch (err: unknown) {
                console.error('Error applying job:', err)
-               const errorMessage = err.response?.data?.message || 'Có lỗi xảy ra khi apply job'
+               const errorMessage = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi apply job'
 
                // Kiểm tra nếu cần upload CV
                if (errorMessage === 'You must upload at least one active CV before applying for jobs') {
@@ -230,13 +246,23 @@ export default function JobDetailPage() {
                                                   <Button variant="outline" size="icon">
                                                        <Share2 className="w-5 h-5" />
                                                   </Button>
-                                                  <Button
-                                                       className={applied ? "bg-green-600 hover:bg-green-700 text-white px-8" : "bg-primary text-primary-foreground hover:bg-primary/90 px-8"}
-                                                       onClick={handleApply}
-                                                       disabled={applying || applied}
-                                                  >
-                                                       {applying ? 'Applying...' : applied ? 'Applied' : 'Apply'}
-                                                  </Button>
+                                                  {applied ? (
+                                                       <Button
+                                                            className="bg-green-600 hover:bg-green-700 text-white px-8 cursor-default"
+                                                            disabled
+                                                       >
+                                                            <Check className="w-5 h-5 mr-2" />
+                                                            Applied
+                                                       </Button>
+                                                  ) : (
+                                                       <Button
+                                                            className="bg-primary text-primary-foreground hover:bg-primary/90 px-8"
+                                                            onClick={handleApply}
+                                                            disabled={applying}
+                                                       >
+                                                            {applying ? 'Applying...' : 'Apply'}
+                                                       </Button>
+                                                  )}
                                              </div>
                                         </div>
                                    </Card>
@@ -420,13 +446,23 @@ export default function JobDetailPage() {
 
                                    {/* Apply Button - Sticky */}
                                    <div className="sticky bottom-6">
-                                        <Button
-                                             className={applied ? "w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base" : "w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base"}
-                                             onClick={handleApply}
-                                             disabled={applying || applied}
-                                        >
-                                             {applying ? 'Applying...' : applied ? 'Applied' : 'Apply Now'}
-                                        </Button>
+                                        {applied ? (
+                                             <Button
+                                                  className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base cursor-default"
+                                                  disabled
+                                             >
+                                                  <Check className="w-5 h-5 mr-2" />
+                                                  Applied
+                                             </Button>
+                                        ) : (
+                                             <Button
+                                                  className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base"
+                                                  onClick={handleApply}
+                                                  disabled={applying}
+                                             >
+                                                  {applying ? 'Applying...' : 'Apply Now'}
+                                             </Button>
+                                        )}
                                    </div>
                               </div>
                          </div>

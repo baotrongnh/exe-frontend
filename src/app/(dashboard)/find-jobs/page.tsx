@@ -58,7 +58,7 @@ export default function FindJobsPage() {
   const router = useRouter();
 
   useEffect(() => {
-    const fetchJobs = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
         // Fetch all jobs without search parameter
@@ -68,7 +68,21 @@ export default function FindJobsPage() {
         });
         console.log("All jobs fetched:", response);
         setAllJobs(response.data || []);
-        setError(null);
+
+        // Fetch user's applications to check which jobs they've already applied to
+        try {
+          const applicationsResponse = await api.applications.getAll();
+          console.log("User applications:", applicationsResponse);
+          if (applicationsResponse.success && applicationsResponse.data) {
+            const appliedJobIds = new Set<string>(
+              applicationsResponse.data.map((app: { job_id: string }) => app.job_id)
+            );
+            setAppliedJobs(appliedJobIds);
+          }
+        } catch (appErr) {
+          console.error("Error fetching applications:", appErr);
+          // Continue even if applications fetch fails
+        } setError(null);
       } catch (err: unknown) {
         console.error("Error fetching jobs:", err);
         const errorMessage = err instanceof Error ? err.message : "Không thể tải dữ liệu jobs";
@@ -78,7 +92,7 @@ export default function FindJobsPage() {
       }
     };
 
-    fetchJobs();
+    fetchData();
   }, []); // Only fetch once on mount
 
   // Filter jobs based on search query

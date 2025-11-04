@@ -2,7 +2,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Calendar, DollarSign } from "lucide-react"
+import { Calendar, DollarSign, Check } from "lucide-react"
 
 interface Job {
     id: string
@@ -116,17 +116,23 @@ export function JobList({ jobs, onApply, applyingJobId, appliedJobs }: JobListPr
                         </div>
 
                         <div className="flex flex-col items-end gap-2 min-w-[140px]">
-                            <Button
-                                className={
-                                    appliedJobs.has(job.id)
-                                        ? "w-full bg-green-600 hover:bg-green-700 text-white"
-                                        : "w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                                }
-                                onClick={(e) => onApply(job.id, e)}
-                                disabled={applyingJobId === job.id || appliedJobs.has(job.id)}
-                            >
-                                {applyingJobId === job.id ? "Applying..." : appliedJobs.has(job.id) ? "Applied" : "Apply"}
-                            </Button>
+                            {appliedJobs.has(job.id) ? (
+                                <Button
+                                    className="w-full bg-green-600 hover:bg-green-700 text-white cursor-default"
+                                    disabled
+                                >
+                                    <Check className="w-4 h-4 mr-1" />
+                                    Applied
+                                </Button>
+                            ) : (
+                                <Button
+                                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
+                                    onClick={(e) => onApply(job.id, e)}
+                                    disabled={applyingJobId === job.id}
+                                >
+                                    {applyingJobId === job.id ? "Applying..." : "Apply"}
+                                </Button>
+                            )}
                             <p className="text-xs text-muted-foreground">
                                 <span className="font-semibold text-foreground">{job.applications_count} applied</span>
                             </p>
