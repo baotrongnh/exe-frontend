@@ -39,12 +39,9 @@ export default function SignupPage() {
                const { error } = await authHelpers.signInWithOAuth('google')
 
                if (error) {
-                    console.error('Error signing up with Google:', error.message)
                     setError(error.message)
                }
-               // OAuth sẽ redirect user đến callback URL
           } catch (err: unknown) {
-               console.error('Unexpected error:', err)
                setError('Đã xảy ra lỗi không mong muốn')
           } finally {
                setIsLoading(false)
@@ -64,21 +61,16 @@ export default function SignupPage() {
                )
 
                if (error) {
-                    console.error('Error signing up:', error.message)
                     setError(error.message)
                     return
                }
 
                if (data.user && !data.session) {
-                    // User created nhưng cần confirm email
                     router.push(`/auth/signup-success?email=${encodeURIComponent(formData.email)}`)
                } else if (data.session) {
-                    // User đã được tạo và tự động đăng nhập
-                    console.log('Signup successful:', data.user)
                     router.push('/')
                }
           } catch (err: unknown) {
-               console.error('Unexpected error:', err)
                setError('Đã xảy ra lỗi không mong muốn')
           } finally {
                setIsEmailLoading(false)

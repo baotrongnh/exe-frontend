@@ -47,13 +47,9 @@ export default function EmployerDashboardPage() {
       if (!user) return;
 
       try {
-        // Gọi Backend API để lấy employer profile
         const data = await api.employer.getProfile();
-
-        console.log("Employer profile loaded:", data);
         setProfile(data);
       } catch (err) {
-        console.error("Error fetching profile:", err);
         setError("Không thể tải thông tin employer profile");
       } finally {
         setLoadingProfile(false);

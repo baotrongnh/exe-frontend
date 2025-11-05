@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import { Search } from "lucide-react";
-import { Input } from "@/components/ui/input";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react"
+import { useSearchParams, useRouter, usePathname } from "next/navigation"
+import { Search } from "lucide-react"
+import { Input } from "@/components/ui/input"
 import {
   MessageThreadItem,
   ConversationView,
@@ -39,114 +39,141 @@ interface MessagesProps {
   basePath?: string;
 }
 
-export default function Messages({ basePath = "" }: MessagesProps) {
-  const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
+function MessagesContent({ basePath = "" }: MessagesProps) {
+    const searchParams = useSearchParams()
+    const router = useRouter()
+    const pathname = usePathname()
 
-  // Auto-detect base path from current URL if not provided
-  const currentBasePath =
-    basePath || (pathname.includes("/employer/") ? "/employer" : "");
+    // Auto-detect base path from current URL if not provided
+    const currentBasePath = basePath || (pathname.includes('/employer/') ? '/employer' : '')
 
-  const [threads, setThreads] = useState<MessageThread[]>([]);
-  const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
-    null
-  );
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set());
+    const [threads, setThreads] = useState<MessageThread[]>([])
+    const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null)
+    const [messages, setMessages] = useState<Message[]>([])
+    const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(null)
+    const [searchQuery, setSearchQuery] = useState("")
+    const [isLoadingMessages, setIsLoadingMessages] = useState(false)
+    const [isSending, setIsSending] = useState(false)
+    const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
 
-  // Video call state
-  const [incomingCallData, setIncomingCallData] = useState<{
-    from: string;
-    callId: string;
-    fromName: string;
-  } | null>(null);
+    // Initialize Socket.IO chat
+    const {
+        isConnected,
+        sendMessage: socketSendMessage,
+        startTyping,
+        stopTyping,
+        connectionError,
+        currentUserId: socketCurrentUserId
+    } = useChat({
+        onNewMessage: async (apiMessage) => {
+            console.log('Received new message via Socket.IO:', apiMessage)
 
-  // Initialize Socket.IO chat (remote server for chat)
-  const {
-    isConnected,
-    sendMessage: socketSendMessage,
-    startTyping,
-    stopTyping,
-    connectionError,
-    currentUserId: socketCurrentUserId,
-    socket,
-  } = useChat({
-    onNewMessage: async (apiMessage) => {
-      console.log("Received new message via Socket.IO:", apiMessage);
+            // Get current user ID for proper message transformation
+            const currentUserId = socketCurrentUserId || await getCurrentUserId()
+            console.log('Current user ID:', currentUserId, 'Message sender ID:', apiMessage.sender_id)
 
-      // Get current user ID for proper message transformation
-      const currentUserId = socketCurrentUserId || (await getCurrentUserId());
-      console.log(
-        "Current user ID:",
-        currentUserId,
-        "Message sender ID:",
-        apiMessage.sender_id
-      );
+            // Skip messages sent by the current user (sender already sees them via optimistic update)
+            if (apiMessage.sender_id === currentUserId) {
+                console.log('Skipping own message from Socket.IO to prevent duplication')
+                return
+            }
 
-      // Skip messages sent by the current user (sender already sees them via optimistic update)
-      if (apiMessage.sender_id === currentUserId) {
-        console.log(
-          "Skipping own message from Socket.IO to prevent duplication"
-        );
-        return;
-      }
+            // Only process messages for the currently selected conversation
+            if (apiMessage.conversation_id !== selectedThreadId) {
+                console.log('Message for different conversation, updating thread list only')
+                // Update thread list for other conversations
+                setThreads(prev => {
+                    const updatedThreads = prev.map(thread =>
+                        thread.id === apiMessage.conversation_id
+                            ? {
+                                ...thread,
+                                lastMessage: apiMessage.content,
+                                timestamp: formatRelativeTime(new Date()),
+                                unreadCount: thread.unreadCount + 1
+                            }
+                            : thread
+                    )
 
-      // Only process messages for the currently selected conversation
-      if (apiMessage.conversation_id !== selectedThreadId) {
-        console.log(
-          "Message for different conversation, updating thread list only"
-        );
-        // Update thread list for other conversations
-        setThreads((prev) => {
-          const updatedThreads = prev.map((thread) =>
-            thread.id === apiMessage.conversation_id
-              ? {
-                ...thread,
-                lastMessage: apiMessage.content,
-                timestamp: formatRelativeTime(new Date()),
-                unreadCount: thread.unreadCount + 1,
-              }
-              : thread
-          );
+                    // Move updated conversation to top
+                    const conversationIndex = updatedThreads.findIndex(t => t.id === apiMessage.conversation_id)
+                    if (conversationIndex > 0) {
+                        const [conversationThread] = updatedThreads.splice(conversationIndex, 1)
+                        updatedThreads.unshift(conversationThread)
+                    }
 
-          // Move updated conversation to top
-          const conversationIndex = updatedThreads.findIndex(
-            (t) => t.id === apiMessage.conversation_id
-          );
-          if (conversationIndex > 0) {
-            const [conversationThread] = updatedThreads.splice(
-              conversationIndex,
-              1
-            );
-            updatedThreads.unshift(conversationThread);
-          }
+                    return updatedThreads
+                })
+                return
+            }
 
-          return updatedThreads;
-        });
-        return;
-      }
+            // Transform the incoming message
+            const transformedMessage = transformMessageToUI(apiMessage, currentUserId || undefined)
 
-      // Transform the incoming message
-      const transformedMessage = transformMessageToUI(
-        apiMessage,
-        currentUserId || undefined
-      );
+            // Add message to current conversation (only for recipients, not senders)
+            setMessages(prev => {
+                // Check if message already exists to prevent duplicates
+                const exists = prev.some(msg => msg.id === transformedMessage.id)
+                if (exists) {
+                    console.log('Message already exists, skipping duplicate:', transformedMessage.id)
+                    return prev
+                }
+                console.log('Adding new message from other user to current conversation:', transformedMessage.id)
 
-      // Add message to current conversation (only for recipients, not senders)
-      setMessages((prev) => {
-        // Check if message already exists to prevent duplicates
-        const exists = prev.some((msg) => msg.id === transformedMessage.id);
-        if (exists) {
-          console.log(
-            "Message already exists, skipping duplicate:",
-            transformedMessage.id
-          );
-          return prev;
+                // Insert message in correct chronological order based on rawTimestamp
+                const newMessages = [...prev, transformedMessage]
+                return newMessages.sort((a, b) => {
+                    const aTime = a.rawTimestamp ? new Date(a.rawTimestamp).getTime() : new Date().getTime()
+                    const bTime = b.rawTimestamp ? new Date(b.rawTimestamp).getTime() : new Date().getTime()
+                    return aTime - bTime
+                })
+            })
+
+            // Update thread list with new last message and move to top
+            setThreads(prev => {
+                const updatedThreads = prev.map(thread =>
+                    thread.id === apiMessage.conversation_id
+                        ? {
+                            ...thread,
+                            lastMessage: apiMessage.content,
+                            timestamp: formatRelativeTime(new Date()),
+                            unreadCount: thread.id === selectedThreadId ? thread.unreadCount : thread.unreadCount + 1
+                        }
+                        : thread
+                )
+
+                // Find the updated conversation and move it to the top
+                const conversationIndex = updatedThreads.findIndex(t => t.id === apiMessage.conversation_id)
+                if (conversationIndex > 0) {
+                    const [conversationThread] = updatedThreads.splice(conversationIndex, 1)
+                    updatedThreads.unshift(conversationThread)
+                }
+
+                return updatedThreads
+            })
+        },
+        onTyping: (data) => {
+            if (data.conversationId === selectedThreadId) {
+                setTypingUsers(prev => {
+                    const newSet = new Set(prev)
+                    // Don't show typing indicator for the current user
+                    if (data.userId !== socketCurrentUserId) {
+                        if (data.isTyping) {
+                            newSet.add(data.userId)
+                        } else {
+                            newSet.delete(data.userId)
+                        }
+                    }
+                    return newSet
+                })
+            }
+        },
+        onMessagesRead: (data) => {
+            if (data.conversationId === selectedThreadId) {
+                setMessages(prev => prev.map(msg => ({
+                    ...msg,
+                    isRead: true
+                })))
+            }
         }
         console.log(
           "Adding new message from other user to current conversation:",
@@ -612,91 +639,21 @@ export default function Messages({ basePath = "" }: MessagesProps) {
             </div>
           )}
         </div>
-      </div>
+    )
+}
 
-      {/* Right side - Conversation view */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {selectedThreadId && selectedCandidate ? (
-          isLoadingMessages ? (
-            <div className="flex-1 flex items-center justify-center bg-gray-50">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4640DE] mx-auto mb-4"></div>
-                <p className="text-gray-500">Loading conversation...</p>
-              </div>
+// Main component with Suspense boundary
+export default function Messages(props: MessagesProps) {
+    return (
+        <Suspense fallback={
+            <div className="h-full flex items-center justify-center bg-white">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#4640DE] mx-auto mb-4"></div>
+                    <p className="text-gray-500">Loading messages...</p>
+                </div>
             </div>
-          ) : (
-            <>
-              <ConversationView
-                messages={messages}
-                candidate={selectedCandidate}
-                threadId={selectedThreadId || ""}
-                onViewProfile={handleViewProfile}
-                onStartCall={handleStartCall}
-                typingUsers={typingUsers}
-                isSending={isSending}
-              />
-              <MessageInput
-                onSendMessage={handleSendMessage}
-                onTyping={handleTyping}
-                isLoading={isSending}
-                placeholder="Reply to candidate..."
-              />
-            </>
-          )
-        ) : (
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Search className="w-8 h-8 text-gray-400" />
-              </div>
-              <h3 className="text-lg font-medium mb-2 text-gray-900">
-                Select a conversation
-              </h3>
-              <p className="text-gray-500">
-                Choose a conversation from the sidebar to start messaging with
-                candidates.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Video Call Modal - for outgoing/active calls */}
-      {callData.status !== "idle" && selectedCandidate && (
-        <VideoCallModal
-          isOpen={true}
-          callStatus={callData.status}
-          localStream={localStream}
-          remoteStream={remoteStream}
-          isMuted={isMuted}
-          isVideoOff={isVideoOff}
-          remoteName={selectedCandidate.name}
-          remoteAvatar={selectedCandidate.avatar}
-          onClose={handleEndCall}
-          onToggleMute={toggleMute}
-          onToggleVideo={toggleVideo}
-          onEndCall={handleEndCall}
-        />
-      )}
-
-      {/* Video Call Modal - for incoming calls */}
-      {incomingCallData && (
-        <VideoCallModal
-          isOpen={true}
-          callStatus="ringing"
-          localStream={null}
-          remoteStream={null}
-          isMuted={false}
-          isVideoOff={false}
-          remoteName={incomingCallData.fromName}
-          onClose={handleDeclineCall}
-          onAccept={handleAcceptCall}
-          onDecline={handleDeclineCall}
-          onToggleMute={toggleMute}
-          onToggleVideo={toggleVideo}
-          onEndCall={handleEndCall}
-        />
-      )}
-    </div>
-  );
+        }>
+            <MessagesContent {...props} />
+        </Suspense>
+    )
 }

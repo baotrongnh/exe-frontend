@@ -10,25 +10,20 @@ interface SearchData {
   location: string
 }
 
-// Empty functions for implementation
-function handleSearch(searchData: SearchData) {
-  console.log("[v0] Search data:", searchData)
-  // Implement search functionality here
+function handleSearch(searchData: any) {
+  // TODO: Implement search functionality
 }
 
-function handleCategoryClick(category: string) {
-  console.log("[v0] Category clicked:", category)
-  // Implement category navigation here
+function handleCategoryClick(category: any) {
+  // TODO: Implement category navigation
 }
 
-function handleJobClick(jobId: number) {
-  console.log("[v0] Job clicked:", jobId)
-  // Implement job details navigation here
+function handleJobClick(jobId: any) {
+  // TODO: Implement job details navigation
 }
 
-function handleNewsletterSignup(email: string) {
-  console.log("[v0] Newsletter signup:", email)
-  // Implement newsletter signup here
+function handleNewsletterSignup(email: any) {
+  // TODO: Implement newsletter signup
 }
 
 export default function LandingPage() {
@@ -36,12 +31,12 @@ export default function LandingPage() {
   const [location, setLocation] = useState("Florence, Italy")
   const [email, setEmail] = useState("")
 
-  const onSearch = (e: FormEvent<HTMLFormElement>) => {
+  const onSearch = (e: any) => {
     e.preventDefault()
     handleSearch({ searchTerm, location })
   }
 
-  const onNewsletterSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const onNewsletterSubmit = (e: any) => {
     e.preventDefault()
     handleNewsletterSignup(email)
     setEmail("")

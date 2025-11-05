@@ -78,11 +78,8 @@ export default function EmployerApplicationsPage() {
     const fetchProfile = async () => {
       try {
         const response = await api.employer.getProfile();
-        console.log("Profile response:", response); // Debug log
 
-        // API trả về trực tiếp profile object, không có wrapper
         if (response && response.id) {
-          console.log("Setting profile:", response); // Debug log
           setProfile(response);
 
           if (!response.is_verified) {
@@ -90,11 +87,9 @@ export default function EmployerApplicationsPage() {
             router.push("/employer/dashboard");
           }
         } else {
-          console.error("Invalid profile response:", response);
           alert("Failed to fetch profile");
         }
       } catch (error) {
-        console.error("Error fetching profile:", error);
         alert("Failed to fetch profile");
       }
     };
@@ -108,29 +103,20 @@ export default function EmployerApplicationsPage() {
       return;
     }
 
-    console.log("Fetching applications..."); // Debug log
-
     const fetchApplications = async () => {
       try {
         setLoading(true);
 
-        // First, get all jobs
         const jobsResponse = await api.jobs.getMyJobs();
 
-        console.log("Jobs " + JSON.stringify(jobsResponse));
-
         if (jobsResponse.success && jobsResponse.data) {
-          // Then fetch applications for each job
           const allApplications: Application[] = [];
 
           for (const job of jobsResponse.data) {
             try {
               const appResponse = await api.applications.getJobApplications(job.id);
 
-              console.log("Appli " + JSON.stringify(appResponse));
-
               if (appResponse.success && appResponse.data) {
-                // Add job info to each application
                 const appsWithJob = appResponse.data.map((app: Application) => ({
                   ...app,
                   job: {
@@ -141,14 +127,13 @@ export default function EmployerApplicationsPage() {
                 allApplications.push(...appsWithJob);
               }
             } catch (error) {
-              console.error(`Error fetching applications for job ${job.id}:`, error);
+              // Continue fetching other applications
             }
           }
 
           setApplications(allApplications);
         }
       } catch (error) {
-        console.error("Error fetching applications:", error);
         alert("Failed to load applications");
       } finally {
         setLoading(false);
@@ -176,7 +161,6 @@ export default function EmployerApplicationsPage() {
   const handleDownloadCV = async (cvId: string, fileName: string) => {
     try {
       const blob = await api.cvs.download(cvId);
-      // Create blob URL and trigger download
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -186,7 +170,6 @@ export default function EmployerApplicationsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error downloading CV:", error);
       alert("Failed to download CV");
     }
   };
@@ -312,30 +295,17 @@ export default function EmployerApplicationsPage() {
     try {
       setActionLoading(`interview-${applicationId}`);
 
-      console.log("=== Schedule Interview ===");
-      console.log("Application ID:", applicationId);
-      console.log("Freelancer ID:", freelancerId);
-      console.log("Job ID:", jobId);
-
       const payload = {
         freelancerId: freelancerId,
         jobId: jobId
       };
 
-      console.log("Payload to send:", payload);
-
       const response = await api.conversations.create(payload);
 
-      console.log("Conversation created successfully:", response);
-
-      toast.showToast("Interview scheduled! A conversation has been created.", "success");
-
-      // Optionally navigate to the conversation page
-      // router.push(`/employer/messages?conversation=${response.data.id}`);
+      alert("Interview scheduled! A conversation has been created.");
 
     } catch (error) {
-      console.error("Error scheduling interview:", error);
-      toast.showToast("Failed to schedule interview. Please try again.", "error");
+      alert("Failed to schedule interview. Please try again.");
     } finally {
       setActionLoading(null);
     }
@@ -542,75 +512,50 @@ export default function EmployerApplicationsPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-col items-end gap-3">
-                      <span className={`inline-flex items-center px-4 py-1.5 rounded-full text-xs font-semibold capitalize shadow-sm ${getStatusColor(application.status)}`}>
-                        {application.status}
-                      </span>
-                      {application.status === "pending" && (
-                        <div className="flex flex-col gap-2 mt-2">
-                          <Button
-                            size="sm"
-                            className="bg-green-600 hover:bg-green-700 text-white w-40 shadow-md hover:shadow-lg transition-all"
-                            onClick={() => handleAccept(application.id)}
-                            disabled={actionLoading === `accept-${application.id}`}
-                          >
-                            {actionLoading === `accept-${application.id}` ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Accepting...
-                              </>
-                            ) : (
-                              <>
-                                <Check className="w-4 h-4 mr-2" />
-                                Accept
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="bg-white hover:bg-indigo-50 w-40 shadow-sm border-indigo-200 text-indigo-600"
-                            onClick={() => handleScheduleInterview(
-                              application.id,
-                              application.applicant_id,
-                              application.job_id
-                            )}
-                            disabled={actionLoading === `interview-${application.id}`}
-                          >
-                            {actionLoading === `interview-${application.id}` ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Creating...
-                              </>
-                            ) : (
-                              <>
-                                <Calendar className="w-4 h-4 mr-2" />
-                                Interview
-                              </>
-                            )}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-white w-40 shadow-sm border-red-200"
-                            onClick={() => handleReject(application.id)}
-                            disabled={actionLoading === `reject-${application.id}`}
-                          >
-                            {actionLoading === `reject-${application.id}` ? (
-                              <>
-                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                Rejecting...
-                              </>
-                            ) : (
-                              <>
-                                <X className="w-4 h-4 mr-2" />
-                                Reject
-                              </>
-                            )}
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                  <div className="flex flex-col items-end gap-2">
+                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(application.status)}`}>{application.status}</span>
+                    {application.status === "pending" && (
+                      <div className="flex flex-col gap-2 mt-2">
+                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-32">
+                          Shortlist
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="bg-transparent w-32"
+                          onClick={() => handleScheduleInterview(
+                            application.id,
+                            application.applicant_id,
+                            application.job_id
+                          )}
+                          disabled={actionLoading === `interview-${application.id}`}
+                        >
+                          {actionLoading === `interview-${application.id}` ? "Creating..." : "Schedule Interview"}
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent w-32">
+                          Reject
+                        </Button>
+                      </div>
+                    )}
+                    {application.status === "shortlisted" && (
+                      <Button
+                        size="sm"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white w-32 mt-2"
+                        onClick={() => handleScheduleInterview(
+                          application.id,
+                          application.applicant_id,
+                          application.job_id
+                        )}
+                        disabled={actionLoading === `interview-${application.id}`}
+                      >
+                        {actionLoading === `interview-${application.id}` ? "Creating..." : "Schedule Interview"}
+                      </Button>
+                    )}
+                    {application.status === "interviewing" && (
+                      <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white w-32 mt-2">
+                        Make Offer
+                      </Button>
+                    )}
                   </div>
                 </div>
               ))

@@ -2,14 +2,14 @@
 
 import Link from "next/link"
 import Image from "next/image"
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { authHelpers } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { FiArrowLeft } from "react-icons/fi"
 import LoadingScreen from "@/components/LoadingScreen"
 
-export default function LoginPage() {
+function LoginContent() {
      const [isLoading, setIsLoading] = useState(false)
      const [isEmailLoading, setIsEmailLoading] = useState(false)
      const [error, setError] = useState("")
@@ -53,15 +53,12 @@ export default function LoginPage() {
                setIsLoading(true)
                setError("")
 
-               const { error } = await authHelpers.signInWithOAuth('google')
+               const { data, error } = await authHelpers.signInWithOAuth('google')
 
                if (error) {
-                    console.error('Error logging in with Google:', error.message)
                     setError(error.message)
                }
-               // OAuth sẽ redirect user đến callback URL, không cần router.push ở đây
           } catch (err: unknown) {
-               console.error('Unexpected error:', err)
                setError('Đã xảy ra lỗi không mong muốn')
           } finally {
                setIsLoading(false)
@@ -77,23 +74,14 @@ export default function LoginPage() {
                const { data, error } = await authHelpers.signInWithEmail(formData.email, formData.password)
 
                if (error) {
-                    console.error('Error logging in with email:', error.message)
                     setError(error.message)
                     return
                }
 
                if (data.user) {
-                    console.log('Login successful:', data.user)
-                    // Redirect based on user role
-                    const role = data.user.user_metadata?.role
-                    if (role === 'employer') {
-                         router.push('/employer/dashboard')
-                    } else {
-                         router.push('/find-jobs')
-                    }
+                    router.push('/find-jobs')
                }
           } catch (err: unknown) {
-               console.error('Unexpected error:', err)
                setError('Đã xảy ra lỗi không mong muốn')
           } finally {
                setIsEmailLoading(false)
@@ -308,5 +296,17 @@ export default function LoginPage() {
                     </div>
                </div>
           </div>
+     )
+}
+
+export default function LoginPage() {
+     return (
+          <Suspense fallback={
+               <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+               </div>
+          }>
+               <LoginContent />
+          </Suspense>
      )
 }
