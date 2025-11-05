@@ -57,11 +57,8 @@ export default function EmployerApplicationsPage() {
     const fetchProfile = async () => {
       try {
         const response = await api.employer.getProfile();
-        console.log("Profile response:", response); // Debug log
 
-        // API trả về trực tiếp profile object, không có wrapper
         if (response && response.id) {
-          console.log("Setting profile:", response); // Debug log
           setProfile(response);
 
           if (!response.is_verified) {
@@ -69,11 +66,9 @@ export default function EmployerApplicationsPage() {
             router.push("/employer/dashboard");
           }
         } else {
-          console.error("Invalid profile response:", response);
           alert("Failed to fetch profile");
         }
       } catch (error) {
-        console.error("Error fetching profile:", error);
         alert("Failed to fetch profile");
       }
     };
@@ -87,29 +82,20 @@ export default function EmployerApplicationsPage() {
       return;
     }
 
-    console.log("Fetching applications..."); // Debug log
-
     const fetchApplications = async () => {
       try {
         setLoading(true);
 
-        // First, get all jobs
         const jobsResponse = await api.jobs.getMyJobs();
 
-        console.log("Jobs " + JSON.stringify(jobsResponse));
-
         if (jobsResponse.success && jobsResponse.data) {
-          // Then fetch applications for each job
           const allApplications: Application[] = [];
 
           for (const job of jobsResponse.data) {
             try {
               const appResponse = await api.applications.getJobApplications(job.id);
 
-              console.log("Appli " + JSON.stringify(appResponse));
-
               if (appResponse.success && appResponse.data) {
-                // Add job info to each application
                 const appsWithJob = appResponse.data.map((app: Application) => ({
                   ...app,
                   job: {
@@ -120,14 +106,13 @@ export default function EmployerApplicationsPage() {
                 allApplications.push(...appsWithJob);
               }
             } catch (error) {
-              console.error(`Error fetching applications for job ${job.id}:`, error);
+              // Continue fetching other applications
             }
           }
 
           setApplications(allApplications);
         }
       } catch (error) {
-        console.error("Error fetching applications:", error);
         alert("Failed to load applications");
       } finally {
         setLoading(false);
@@ -155,7 +140,6 @@ export default function EmployerApplicationsPage() {
   const handleDownloadCV = async (cvId: string, fileName: string) => {
     try {
       const blob = await api.cvs.download(cvId);
-      // Create blob URL and trigger download
       const url = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
@@ -165,7 +149,6 @@ export default function EmployerApplicationsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch (error) {
-      console.error("Error downloading CV:", error);
       alert("Failed to download CV");
     }
   };
@@ -174,30 +157,17 @@ export default function EmployerApplicationsPage() {
   const handleScheduleInterview = async (applicationId: string, freelancerId: string, jobId: string) => {
     try {
       setActionLoading(`interview-${applicationId}`);
-      
-      console.log("=== Schedule Interview ===");
-      console.log("Application ID:", applicationId);
-      console.log("Freelancer ID:", freelancerId);
-      console.log("Job ID:", jobId);
 
       const payload = {
         freelancerId: freelancerId,
         jobId: jobId
       };
 
-      console.log("Payload to send:", payload);
-
       const response = await api.conversations.create(payload);
-      
-      console.log("Conversation created successfully:", response);
-      
+
       alert("Interview scheduled! A conversation has been created.");
-      
-      // Optionally navigate to the conversation page
-      // router.push(`/employer/messages?conversation=${response.data.id}`);
-      
+
     } catch (error) {
-      console.error("Error scheduling interview:", error);
       alert("Failed to schedule interview. Please try again.");
     } finally {
       setActionLoading(null);
@@ -369,9 +339,9 @@ export default function EmployerApplicationsPage() {
                         <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-32">
                           Shortlist
                         </Button>
-                        <Button 
-                          size="sm" 
-                          variant="outline" 
+                        <Button
+                          size="sm"
+                          variant="outline"
                           className="bg-transparent w-32"
                           onClick={() => handleScheduleInterview(
                             application.id,
@@ -388,8 +358,8 @@ export default function EmployerApplicationsPage() {
                       </div>
                     )}
                     {application.status === "shortlisted" && (
-                      <Button 
-                        size="sm" 
+                      <Button
+                        size="sm"
                         className="bg-indigo-600 hover:bg-indigo-700 text-white w-32 mt-2"
                         onClick={() => handleScheduleInterview(
                           application.id,

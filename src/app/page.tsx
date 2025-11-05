@@ -4,25 +4,20 @@ import Navbar from "@/components/Navbar"
 import Link from "next/link"
 import { useState } from "react"
 
-// Empty functions for implementation
-function handleSearch(searchData : any) {
-  console.log("[v0] Search data:", searchData)
-  // Implement search functionality here
+function handleSearch(searchData: any) {
+  // TODO: Implement search functionality
 }
 
-function handleCategoryClick(category : any) {
-  console.log("[v0] Category clicked:", category)
-  // Implement category navigation here
+function handleCategoryClick(category: any) {
+  // TODO: Implement category navigation
 }
 
-function handleJobClick(jobId : any) {
-  console.log("[v0] Job clicked:", jobId)
-  // Implement job details navigation here
+function handleJobClick(jobId: any) {
+  // TODO: Implement job details navigation
 }
 
-function handleNewsletterSignup(email : any) {
-  console.log("[v0] Newsletter signup:", email)
-  // Implement newsletter signup here
+function handleNewsletterSignup(email: any) {
+  // TODO: Implement newsletter signup
 }
 
 export default function LandingPage() {
@@ -30,12 +25,12 @@ export default function LandingPage() {
   const [location, setLocation] = useState("Florence, Italy")
   const [email, setEmail] = useState("")
 
-  const onSearch = (e : any) => {
+  const onSearch = (e: any) => {
     e.preventDefault()
     handleSearch({ searchTerm, location })
   }
 
-  const onNewsletterSubmit = (e : any) => {
+  const onNewsletterSubmit = (e: any) => {
     e.preventDefault()
     handleNewsletterSignup(email)
     setEmail("")
@@ -45,8 +40,8 @@ export default function LandingPage() {
     <div className="min-h-screen bg-white">
 
       <Navbar />
-      
-      
+
+
       {/* Hero Section */}
       <section className="relative px-6 py-4 bg-gradient-to-br from-purple-50 via-blue-50 to-purple-100 overflow-hidden min-h-screen">
         <div className="absolute inset-0 overflow-hidden">
@@ -355,10 +350,10 @@ export default function LandingPage() {
                     <span
                       key={index}
                       className={`px-3 py-1 rounded-full text-xs font-medium ${tag === "Marketing"
-                          ? "bg-orange-100 text-orange-600"
-                          : tag === "Design"
-                            ? "bg-purple-100 text-purple-600"
-                            : "bg-blue-100 text-blue-600"
+                        ? "bg-orange-100 text-orange-600"
+                        : tag === "Design"
+                          ? "bg-purple-100 text-purple-600"
+                          : "bg-blue-100 text-blue-600"
                         }`}
                     >
                       {tag}
@@ -477,12 +472,12 @@ export default function LandingPage() {
                     <span
                       key={index}
                       className={`px-3 py-1 rounded-full text-xs font-medium ${tag === "Part Time"
-                          ? "bg-green-100 text-green-600"
-                          : tag === "Marketing"
-                            ? "bg-orange-100 text-orange-600"
-                            : tag === "Design"
-                              ? "bg-purple-100 text-purple-600"
-                              : "bg-blue-100 text-blue-600"
+                        ? "bg-green-100 text-green-600"
+                        : tag === "Marketing"
+                          ? "bg-orange-100 text-orange-600"
+                          : tag === "Design"
+                            ? "bg-purple-100 text-purple-600"
+                            : "bg-blue-100 text-blue-600"
                         }`}
                     >
                       {tag}

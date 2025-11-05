@@ -47,9 +47,6 @@ export default function PostJobPage() {
         skills_required: skillsArray,
       };
 
-      console.log("Posting job:", jobData);
-
-      // Call API to create job
       await api.jobs.create(jobData);
 
       showToast("Job posted successfully! Waiting for admin approval.", "success");
@@ -57,7 +54,6 @@ export default function PostJobPage() {
         router.push("/employer/dashboard");
       }, 1500);
     } catch (error: unknown) {
-      console.error("Error posting job:", error);
       const err = error as { response?: { data?: { message?: string } } };
       const errorMessage = err.response?.data?.message || "Failed to post job. Please try again.";
       showToast(errorMessage, "error");

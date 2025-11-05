@@ -49,7 +49,6 @@ export default function MyJobsPage() {
           router.push("/employer/dashboard");
         }
       } catch (error) {
-        console.error("Error fetching profile:", error);
         router.push("/employer/dashboard");
       }
     }
@@ -57,7 +56,6 @@ export default function MyJobsPage() {
     checkAccess();
   }, [user, userRole, authLoading, router, showToast]);
 
-  // Fetch jobs
   useEffect(() => {
     async function fetchJobs() {
       if (!profile?.is_verified) return;
@@ -65,10 +63,8 @@ export default function MyJobsPage() {
       try {
         setLoading(true);
         const response = await api.jobs.getMyJobs();
-        console.log("My jobs:", response);
         setJobs(response.jobs || response.data || []);
       } catch (error) {
-        console.error("Error fetching jobs:", error);
         showToast("Failed to load jobs", "error");
       } finally {
         setLoading(false);
