@@ -9,24 +9,32 @@ import { Input } from "@/components/ui/input";
 import { Search, Filter, Package, FileDown, Loader2 } from "lucide-react";
 import { DeliverableCard, RejectModal, DetailsModal, StatsCards } from "./components";
 
+interface ProductFile {
+    name: string;
+    path: string;
+    size: number;
+    mimetype: string;
+}
+
 interface Deliverable {
     id: string;
     job_id: string;
-    freelancer_id: string;
+    applicant_id: string;
     title: string;
     description: string;
-    status: "pending" | "approved" | "rejected" | "revision_requested";
-    files: string[];
-    submitted_at: string;
-    reviewed_at?: string;
-    rejection_reason?: string;
-    revision_notes?: string;
-    // Populated fields
+    status: "pending" | "approved" | "rejected";
+    files: ProductFile[];
+    created_at: string;
+    reviewed_at?: string | null;
+    rejection_reason?: string | null;
+    reviewed_by?: string | null;
+    updated_at: string;
+    // Populated fields from backend (if available)
     job?: {
         id: string;
         title: string;
     };
-    freelancer?: {
+    applicant?: {
         id: string;
         full_name: string;
         email: string;
@@ -85,7 +93,7 @@ export default function EmployerDeliverablesPage() {
         fetchProfile();
     }, [user, router]);
 
-    // Fetch all deliverables for all jobs
+    // Fetch all deliverables (job products) for all jobs
     useEffect(() => {
         if (!profile?.is_verified) {
             return;
@@ -95,74 +103,50 @@ export default function EmployerDeliverablesPage() {
             try {
                 setLoading(true);
 
-                // Mock data for now - replace with actual API call when backend is ready
-                // const response = await api.deliverables.getAll();
+                // Get all jobs for the employer
+                const jobsResponse = await api.jobs.getMyJobs();
+                console.log("Jobs response:", jobsResponse);
 
-                // Simulated data
-                const mockDeliverables: Deliverable[] = [
-                    {
-                        id: "1",
-                        job_id: "job-1",
-                        freelancer_id: "freelancer-1",
-                        title: "Website Homepage Design",
-                        description: "Completed the homepage design with all requested features including hero section, services overview, and contact form.",
-                        status: "pending",
-                        files: ["homepage-design.fig", "assets.zip"],
-                        submitted_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-                        job: {
-                            id: "job-1",
-                            title: "Full Stack Website Development",
-                        },
-                        freelancer: {
-                            id: "freelancer-1",
-                            full_name: "John Doe",
-                            email: "john@example.com",
-                        },
-                    },
-                    {
-                        id: "2",
-                        job_id: "job-2",
-                        freelancer_id: "freelancer-2",
-                        title: "Mobile App UI/UX",
-                        description: "Complete UI/UX design for the mobile application with all screens and user flows.",
-                        status: "approved",
-                        files: ["mobile-ui.fig", "prototype-link.txt"],
-                        submitted_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-                        reviewed_at: new Date(Date.now() - 20 * 60 * 60 * 1000).toISOString(),
-                        job: {
-                            id: "job-2",
-                            title: "Mobile App Design",
-                        },
-                        freelancer: {
-                            id: "freelancer-2",
-                            full_name: "Jane Smith",
-                            email: "jane@example.com",
-                        },
-                    },
-                    {
-                        id: "3",
-                        job_id: "job-3",
-                        freelancer_id: "freelancer-3",
-                        title: "Logo Design Initial Draft",
-                        description: "First draft of the logo design with 3 different concepts as requested.",
-                        status: "rejected",
-                        files: ["logo-concepts.pdf"],
-                        submitted_at: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),
-                        reviewed_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(),
-                        rejection_reason: "The color scheme doesn't match our brand guidelines. Please use our primary colors (Blue #1E40AF and Gray #6B7280).",
-                        job: {
-                            id: "job-3",
-                            title: "Brand Identity Design",
-                        },
-                        freelancer: {
-                            id: "freelancer-3",
-                            full_name: "Mike Johnson",
-                            email: "mike@example.com",
-                        },
-                    },
-                ];
+                if (!jobsResponse.success || !jobsResponse.data) {
+                    setDeliverables([]);
+                    return;
+                }
 
-                setDeliverables(mockDeliverables);
+                // Fetch products for each job
+                const allProducts: Deliverable[] = [];
+                for (const job of jobsResponse.data) {
+                    try {
+                        const productsResponse = await api.jobProducts.getByJob(job.id);
+                        console.log(`Products for job ${job.id}:`, productsResponse);
+
+                        if (productsResponse.success && productsResponse.data?.products) {
+                            // Add job info to each product and log detailed structure
+                            const productsWithJob = productsResponse.data.products.map((product: Deliverable) => {
+                                console.log("Product structure:", {
+                                    id: product.id,
+                                    hasFiles: !!product.files,
+                                    filesLength: product.files?.length,
+                                    files: product.files,
+                                    hasApplicant: !!product.applicant,
+                                    applicant: product.applicant,
+                                });
+                                return {
+                                    ...product,
+                                    job: {
+                                        id: job.id,
+                                        title: job.title,
+                                    },
+                                };
+                            });
+                            allProducts.push(...productsWithJob);
+                        }
+                    } catch (error) {
+                        console.error(`Error fetching products for job ${job.id}:`, error);
+                    }
+                }
+
+                console.log("All products:", allProducts);
+                setDeliverables(allProducts);
             } catch (error) {
                 console.error("Error fetching deliverables:", error);
                 alert("Failed to load deliverables");
@@ -197,11 +181,12 @@ export default function EmployerDeliverablesPage() {
         try {
             setActionLoading(`approve-${deliverableId}`);
 
-            console.log("=== Approve Deliverable ===");
-            console.log("Deliverable ID:", deliverableId);
+            console.log("=== Approve Product ===");
+            console.log("Product ID:", deliverableId);
 
-            // TODO: Replace with actual API call
-            // await api.deliverables.approve(deliverableId);
+            await api.jobProducts.review(deliverableId, {
+                status: "approved",
+            });
 
             // Update local state
             setDeliverables((prev) =>
@@ -212,10 +197,10 @@ export default function EmployerDeliverablesPage() {
                 )
             );
 
-            alert("Deliverable approved successfully!");
+            alert("Product approved successfully!");
         } catch (error) {
-            console.error("Error approving deliverable:", error);
-            alert("Failed to approve deliverable. Please try again.");
+            console.error("Error approving product:", error);
+            alert("Failed to approve product. Please try again.");
         } finally {
             setActionLoading(null);
         }
@@ -228,7 +213,7 @@ export default function EmployerDeliverablesPage() {
         setRejectModalOpen(true);
     };
 
-    // Handle Reject Deliverable
+    // Handle Reject Product
     const handleReject = async () => {
         if (!selectedDeliverable || !rejectionReason.trim()) {
             alert("Please provide a reason for rejection");
@@ -238,12 +223,14 @@ export default function EmployerDeliverablesPage() {
         try {
             setActionLoading(`reject-${selectedDeliverable.id}`);
 
-            console.log("=== Reject Deliverable ===");
-            console.log("Deliverable ID:", selectedDeliverable.id);
+            console.log("=== Reject Product ===");
+            console.log("Product ID:", selectedDeliverable.id);
             console.log("Rejection Reason:", rejectionReason);
 
-            // TODO: Replace with actual API call
-            // await api.deliverables.reject(selectedDeliverable.id, { reason: rejectionReason });
+            await api.jobProducts.review(selectedDeliverable.id, {
+                status: "rejected",
+                rejection_reason: rejectionReason,
+            });
 
             // Update local state
             setDeliverables((prev) =>
@@ -259,13 +246,13 @@ export default function EmployerDeliverablesPage() {
                 )
             );
 
-            alert("Deliverable rejected successfully!");
+            alert("Product rejected successfully!");
             setRejectModalOpen(false);
             setSelectedDeliverable(null);
             setRejectionReason("");
         } catch (error) {
-            console.error("Error rejecting deliverable:", error);
-            alert("Failed to reject deliverable. Please try again.");
+            console.error("Error rejecting product:", error);
+            alert("Failed to reject product. Please try again.");
         } finally {
             setActionLoading(null);
         }
@@ -278,10 +265,66 @@ export default function EmployerDeliverablesPage() {
     };
 
     // Handle Download File
-    const handleDownloadFile = (fileName: string) => {
-        // TODO: Replace with actual file download
-        console.log("Downloading file:", fileName);
-        alert(`Downloading ${fileName}...`);
+    const handleDownloadFile = async (fileUrl: string, fileName: string, productId: string, fileIndex: number) => {
+        try {
+            console.log("=== DOWNLOAD FILE START ===");
+            console.log("Product ID:", productId);
+            console.log("File Index:", fileIndex);
+            console.log("File Name:", fileName);
+
+            // Get backend download URL
+            const backendUrl = await api.jobProducts.downloadFile(productId, fileIndex);
+            console.log("Backend download URL:", backendUrl);
+
+            // Fetch file with authentication (axios will add auth token automatically)
+            // We need to use the jobProductsApiClient which has auth interceptor
+            const response = await fetch(backendUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${(await import('@/lib/supabase').then(m => m.supabase.auth.getSession())).data.session?.access_token}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+            }
+
+            // Convert response to blob
+            const blob = await response.blob();
+            console.log("Blob created:", (blob.size / 1024 / 1024).toFixed(2), "MB");
+
+            // Create blob URL and trigger download
+            const blobUrl = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = fileName;
+            link.style.display = 'none';
+
+            document.body.appendChild(link);
+            link.click();
+
+            // Cleanup
+            setTimeout(() => {
+                document.body.removeChild(link);
+                URL.revokeObjectURL(blobUrl);
+                console.log("=== DOWNLOAD SUCCESS ===");
+            }, 100);
+
+            alert("Download started! Check your Downloads folder.");
+        } catch (error) {
+            console.error("=== DOWNLOAD ERROR ===", error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            alert(`Download failed: ${errorMessage}. Opening file in new tab...`);
+
+            // Fallback: use original file URL (Firebase direct URL)
+            if (fileUrl && fileUrl !== '') {
+                console.log("Falling back to original file URL:", fileUrl);
+                window.open(fileUrl, '_blank');
+            } else {
+                alert("Failed to download file. Please try again.");
+            }
+        }
     };
 
     // Filter deliverables
@@ -289,7 +332,7 @@ export default function EmployerDeliverablesPage() {
         const matchesSearch =
             (deliverable.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
             (deliverable.job?.title || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (deliverable.freelancer?.full_name || "").toLowerCase().includes(searchQuery.toLowerCase());
+            (deliverable.applicant?.full_name || "").toLowerCase().includes(searchQuery.toLowerCase());
         const matchesTab = selectedTab === "all" || deliverable.status === selectedTab;
         return matchesSearch && matchesTab;
     });
@@ -379,8 +422,8 @@ export default function EmployerDeliverablesPage() {
                                     key={tab.key}
                                     onClick={() => setSelectedTab(tab.key)}
                                     className={`px-4 py-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap rounded-t-lg ${selectedTab === tab.key
-                                            ? "border-indigo-600 text-indigo-600 bg-indigo-50"
-                                            : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                                        ? "border-indigo-600 text-indigo-600 bg-indigo-50"
+                                        : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                                         }`}
                                 >
                                     {tab.label}{" "}

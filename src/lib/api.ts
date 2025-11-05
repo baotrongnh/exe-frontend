@@ -3,6 +3,7 @@ import { supabase } from "./supabase";
 
 // Base URL cho API backend
 export const API_BASE_URL = "http://14.169.52.232:3003"; // Backend API base URL
+const TEMP_API_URL = 'https://513q6dp9-5000.asse.devtunnels.ms'
 const CV_API_BASE_URL = "http://14.169.15.9:3003/api";
 const VIDEO_CALL_API_BASE_URL = "http://14.169.15.9:3003"; // Video Call API base URL
 
@@ -30,6 +31,12 @@ const videoCallApiClient = axios.create({
   },
 });
 
+// Tạo axios instance riêng cho Job Products API (temporary)
+// Don't set default Content-Type - let axios handle it based on data type (JSON vs FormData)
+const jobProductsApiClient = axios.create({
+  baseURL: TEMP_API_URL,
+});
+
 // Interceptor để tự động thêm access token vào header cho general API
 apiClient.interceptors.request.use(
   async (config) => {
@@ -46,6 +53,7 @@ apiClient.interceptors.request.use(
       });
 
       if (session?.access_token) {
+        // Set authorization header - config.headers should already exist from axios
         config.headers.Authorization = `Bearer ${session.access_token}`;
         console.log(
           "Adding auth token to request:",
@@ -151,6 +159,49 @@ videoCallApiClient.interceptors.request.use(
   }
 );
 
+// Interceptor để tự động thêm access token vào header cho Job Products API
+jobProductsApiClient.interceptors.request.use(
+  async (config) => {
+    try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      console.log("Job Products API Session check:", {
+        hasSession: !!session,
+        hasAccessToken: !!session?.access_token,
+        tokenPreview: session?.access_token
+          ? session.access_token.substring(0, 20) + "..."
+          : "none",
+      });
+
+      if (session?.access_token) {
+        // Set authorization header - config.headers should already exist from axios
+        config.headers.Authorization = `Bearer ${session.access_token}`;
+        console.log(
+          "Adding auth token to Job Products API request:",
+          config.url,
+          "Token length:",
+          session.access_token.length
+        );
+      } else {
+        console.warn(
+          "No auth token available for Job Products API request:",
+          config.url
+        );
+        console.warn("User might not be authenticated for Job Products API");
+      }
+    } catch (error) {
+      console.error("Error getting session for Job Products API:", error);
+    }
+
+    return config;
+  },
+  (error) => {
+    console.error("Job Products API Request interceptor error:", error);
+    return Promise.reject(error);
+  }
+);
+
 // Interceptor để xử lý response errors cho general API
 apiClient.interceptors.response.use(
   (response) => {
@@ -244,6 +295,40 @@ videoCallApiClient.interceptors.response.use(
       // Check if it's specifically a "No token provided" error
       if (error.response?.data?.message === "No token provided!") {
         console.error("No token was sent with the Video Call API request");
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
+// Interceptor để xử lý response errors cho Job Products API
+jobProductsApiClient.interceptors.response.use(
+  (response) => {
+    console.log(
+      "Job Products API Response successful:",
+      response.config.url,
+      response.status
+    );
+    return response;
+  },
+  (error) => {
+    console.error("Job Products API Error:", {
+      url: error.config?.url,
+      method: error.config?.method,
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+    });
+
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      // Token hết hạn hoặc không hợp lệ
+      console.error(
+        "Job Products API Authentication failed - token invalid or missing"
+      );
+      // Check if it's specifically a "No token provided" error
+      if (error.response?.data?.message === "No token provided!") {
+        console.error("No token was sent with the Job Products API request");
       }
     }
     return Promise.reject(error);
@@ -723,6 +808,179 @@ export const api = {
       const response = await apiClient.get(`/api/deliverables/${id}/files/${fileName}`, {
         responseType: "blob",
       });
+      return response.data;
+    },
+  },
+
+  // Job Products APIs
+  jobProducts: {
+    // Upload job product with Firebase Storage
+    // Files are automatically uploaded to Firebase Storage and stored as public URLs
+    // Maximum 10 files per upload, 25MB per file
+    // Supported formats: PDF, DOC, DOCX, XLS, XLSX, ZIP, JPG, PNG, GIF, TXT
+    upload: async (data: {
+      job_id: string;
+      title: string;
+      description?: string;
+      files: File[];
+    }) => {
+      console.log("Job Products Upload - Starting Firebase upload with data:", {
+        job_id: data.job_id,
+        title: data.title,
+        description: data.description,
+        fileCount: data.files.length,
+        files: data.files.map(f => ({ name: f.name, size: f.size, type: f.type }))
+      });
+
+      // Validate file count
+      if (data.files.length > 10) {
+        throw new Error("Maximum 10 files allowed per upload");
+      }
+
+      // Validate file sizes
+      const maxSize = 25 * 1024 * 1024; // 25MB
+      for (const file of data.files) {
+        if (file.size > maxSize) {
+          throw new Error(`File ${file.name} exceeds 25MB limit`);
+        }
+      }
+
+      const formData = new FormData();
+      formData.append("job_id", data.job_id);
+      formData.append("title", data.title);
+      if (data.description) {
+        formData.append("description", data.description);
+      }
+
+      data.files.forEach((file) => {
+        formData.append("files", file);
+      });
+
+      console.log("FormData entries:");
+      for (const [key, value] of formData.entries()) {
+        console.log(key, value instanceof File ? `File: ${value.name}` : value);
+      }
+
+      try {
+        // Don't set Content-Type manually - let browser set it with boundary
+        console.log("Sending POST request to /api/job-products (Firebase Storage)");
+        const response = await jobProductsApiClient.post("/api/job-products", formData);
+        console.log("Job Products Upload - Success (Firebase URLs):", response.data);
+        // Response structure:
+        // {
+        //   success: true,
+        //   message: "Job product uploaded successfully to Firebase",
+        //   data: {
+        //     id: "...",
+        //     job_id: "...",
+        //     applicant_id: "...",
+        //     title: "...",
+        //     description: "...",
+        //     files: ["https://storage.googleapis.com/.../file1.pdf", ...],
+        //     status: "pending",
+        //     created_at: "..."
+        //   }
+        // }
+        return response.data;
+      } catch (error) {
+        console.error("Job Products Upload - Error:", error);
+        if (error instanceof Error && "response" in error) {
+          const axiosError = error as AxiosError;
+          console.error("Error response:", axiosError.response?.data);
+          console.error("Error status:", axiosError.response?.status);
+          console.error("Error headers:", axiosError.response?.headers);
+        }
+        throw error;
+      }
+    },
+
+    // Get user's own products with pagination
+    getAll: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: "pending" | "rejected" | "approved";
+      job_id?: string;
+      sort?: string;
+      order?: "ASC" | "DESC";
+    }) => {
+      const response = await jobProductsApiClient.get("/api/job-products", { params });
+      // Response structure:
+      // {
+      //   success: true,
+      //   data: {
+      //     products: [
+      //       {
+      //         id: "...",
+      //         job_id: "...",
+      //         applicant_id: "...",
+      //         title: "...",
+      //         description: "...",
+      //         files: [
+      //           { name: "file.pdf", path: "https://...", size: 12345, mimetype: "application/pdf" }
+      //         ],
+      //         status: "pending",
+      //         rejection_reason: null,
+      //         reviewed_at: null,
+      //         reviewed_by: null,
+      //         created_at: "...",
+      //         updated_at: "..."
+      //       }
+      //     ],
+      //     pagination: { total: 10, page: 1, limit: 10, pages: 1 }
+      //   }
+      // }
+      return response.data;
+    },
+
+    // Get a specific product
+    getById: async (id: string) => {
+      const response = await jobProductsApiClient.get(`/api/job-products/${id}`);
+      return response.data;
+    },
+
+    // Delete job product (pending only)
+    delete: async (id: string) => {
+      const response = await jobProductsApiClient.delete(`/api/job-products/${id}`);
+      return response.data;
+    },
+
+    // Download product file
+    // Backend now serves file directly with proper headers (status 200)
+    // Returns the download URL for the file
+    downloadFile: async (id: string, fileIndex: number): Promise<string> => {
+      console.log("=== DOWNLOAD FILE START ===");
+      console.log("Product ID:", id);
+      console.log("File Index:", fileIndex);
+
+      // Simply return the API endpoint URL
+      // The backend will handle the file download directly
+      const downloadUrl = `${TEMP_API_URL}/api/job-products/${id}/files/${fileIndex}`;
+      console.log("Download URL:", downloadUrl);
+
+      return downloadUrl;
+    },
+
+    // Get all products for a specific job (employer only)
+    getByJob: async (
+      jobId: string,
+      params?: {
+        page?: number;
+        limit?: number;
+        status?: "pending" | "rejected" | "approved";
+        sort?: string;
+        order?: "ASC" | "DESC";
+      }
+    ) => {
+      const response = await jobProductsApiClient.get(`/api/job-products/by-job/${jobId}`, { params });
+      return response.data;
+    },
+
+    // Review a product (employer only)
+    review: async (id: string, data: {
+      status: "approved" | "rejected";
+      rejection_reason?: string;
+    }) => {
+      const response = await jobProductsApiClient.patch(`/api/job-products/${id}/review`, data);
       return response.data;
     },
   },

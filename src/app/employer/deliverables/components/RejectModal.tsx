@@ -12,23 +12,31 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { XCircle, Loader2 } from "lucide-react";
 
+interface ProductFile {
+    name: string;
+    path: string;
+    size: number;
+    mimetype: string;
+}
+
 interface Deliverable {
     id: string;
     job_id: string;
-    freelancer_id: string;
+    applicant_id: string;
     title: string;
     description: string;
-    status: "pending" | "approved" | "rejected" | "revision_requested";
-    files: string[];
-    submitted_at: string;
-    reviewed_at?: string;
-    rejection_reason?: string;
-    revision_notes?: string;
+    status: "pending" | "approved" | "rejected";
+    files: ProductFile[];
+    created_at: string;
+    reviewed_at?: string | null;
+    rejection_reason?: string | null;
+    reviewed_by?: string | null;
+    updated_at: string;
     job?: {
         id: string;
         title: string;
     };
-    freelancer?: {
+    applicant?: {
         id: string;
         full_name: string;
         email: string;
@@ -71,7 +79,7 @@ export function RejectModal({
                     {deliverable && (
                         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <h4 className="font-semibold text-gray-900 mb-1">{deliverable.title}</h4>
-                            <p className="text-sm text-gray-600">{deliverable.freelancer?.full_name}</p>
+                            <p className="text-sm text-gray-600">{deliverable.applicant?.full_name || "Unknown Applicant"}</p>
                         </div>
                     )}
                     <div>

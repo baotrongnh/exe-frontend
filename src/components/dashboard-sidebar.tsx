@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname, useRouter } from "next/navigation"
-import { LayoutDashboard, MessageSquare, FileText, Search, Building2, User, Settings, HelpCircle, FileUser, LogOut, Wallet } from "lucide-react"
+import { LayoutDashboard, MessageSquare, FileText, Search, Building2, User, Settings, HelpCircle, FileUser, LogOut, Wallet, Briefcase } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -12,6 +12,7 @@ const navItems = [
      { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
      { href: "/messages", label: "Messages", icon: MessageSquare, badge: 1 },
      { href: "/my-applications", label: "My Applications", icon: FileText },
+     { href: "/my-jobs", label: "My Jobs", icon: Briefcase },
      { href: "/find-jobs", label: "Find Jobs", icon: Search },
      { href: "/browse-employers", label: "Browse Employers", icon: Building2 },
      { href: "/wallet", label: "My Wallet", icon: Wallet },
