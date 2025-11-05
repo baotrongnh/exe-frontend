@@ -21,14 +21,14 @@ function ConfirmContent() {
         if (error) {
           setError('Link xác thực không hợp lệ hoặc đã hết hạn.')
         }
-        
+
         if (!error) {
-            setConfirmed(true)
-            
-            // Redirect đến trang chính sau 3 giây
-            setTimeout(() => {
-              router.push('/')
-            }, 3000)
+          setConfirmed(true)
+
+          // Redirect đến trang chính sau 3 giây
+          setTimeout(() => {
+            router.push('/')
+          }, 3000)
         } else {
           setError('Link xác thực không hợp lệ hoặc đã hết hạn.')
         }
@@ -74,7 +74,7 @@ function ConfirmContent() {
           <p className="text-gray-600 mb-6">
             Tài khoản của bạn đã được kích hoạt thành công. Bạn sẽ được chuyển đến trang chính trong giây lát.
           </p>
-          <Link 
+          <Link
             href="/"
             className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -100,13 +100,13 @@ function ConfirmContent() {
           {error || 'Không thể xác thực email. Link có thể đã hết hạn hoặc không hợp lệ.'}
         </p>
         <div className="space-y-3">
-          <Link 
+          <Link
             href="/sign-up"
             className="block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Đăng ký lại
           </Link>
-          <Link 
+          <Link
             href="/login"
             className="block text-blue-600 hover:text-blue-500 text-sm"
           >

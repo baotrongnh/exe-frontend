@@ -41,6 +41,8 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // Disable static export if causing issues
+  output: undefined,
 };
 
 export default nextConfig;

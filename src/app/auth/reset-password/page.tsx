@@ -24,11 +24,11 @@ function ResetPasswordContent() {
         const params = new URLSearchParams(hash.slice(1))
         const error = params.get('error')
 
-          if (error) {
-            setError('Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.')
-          } else {
-            setIsValidToken(true)
-          }
+        if (error) {
+          setError('Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.')
+        } else {
+          setIsValidToken(true)
+        }
       } catch (err: unknown) {
         console.error('Unexpected error:', err)
         setError('Đã xảy ra lỗi không mong muốn')
@@ -42,7 +42,7 @@ function ResetPasswordContent() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    
+
     if (!password.trim()) {
       setError('Vui lòng nhập mật khẩu mới')
       return
@@ -115,7 +115,7 @@ function ResetPasswordContent() {
           <p className="text-gray-600 mb-6">
             Mật khẩu của bạn đã được thay đổi thành công. Bạn sẽ được chuyển đến trang đăng nhập.
           </p>
-          <Link 
+          <Link
             href="/login"
             className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -142,13 +142,13 @@ function ResetPasswordContent() {
             {error || 'Link đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.'}
           </p>
           <div className="space-y-3">
-            <Link 
+            <Link
               href="/forgot-password"
               className="block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
             >
               Yêu cầu link mới
             </Link>
-            <Link 
+            <Link
               href="/login"
               className="block text-blue-600 hover:text-blue-500 text-sm"
             >
@@ -236,7 +236,7 @@ function ResetPasswordContent() {
         </form>
 
         <div className="mt-6 text-center">
-          <Link 
+          <Link
             href="/login"
             className="text-blue-600 hover:text-blue-500 text-sm font-medium"
           >
