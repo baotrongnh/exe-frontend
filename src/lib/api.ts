@@ -21,7 +21,7 @@ const cvApiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-});
+})
 
 // Tạo axios instance riêng cho Video Call API
 const videoCallApiClient = axios.create({
