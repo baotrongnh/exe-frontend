@@ -88,7 +88,7 @@ export default function EmployerApplicationsPage() {
         } else {
           alert("Failed to fetch profile");
         }
-      } catch (error) {
+      } catch {
         alert("Failed to fetch profile");
       }
     };
@@ -125,14 +125,14 @@ export default function EmployerApplicationsPage() {
                 }));
                 allApplications.push(...appsWithJob);
               }
-            } catch (error) {
+            } catch {
               // Continue fetching other applications
             }
           }
 
           setApplications(allApplications);
         }
-      } catch (error) {
+      } catch {
         alert("Failed to load applications");
       } finally {
         setLoading(false);
@@ -168,7 +168,7 @@ export default function EmployerApplicationsPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       alert("Failed to download CV");
     }
   };
@@ -257,11 +257,11 @@ export default function EmployerApplicationsPage() {
         jobId: jobId
       };
 
-      const response = await api.conversations.create(payload);
+      await api.conversations.create(payload);
 
       alert("Interview scheduled! A conversation has been created.");
 
-    } catch (error) {
+    } catch {
       alert("Failed to schedule interview. Please try again.");
     } finally {
       setActionLoading(null);
