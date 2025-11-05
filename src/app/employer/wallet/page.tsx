@@ -5,11 +5,11 @@ import { api } from "@/lib/api";
 import { WalletTransaction } from "@/types/wallet";
 import { WalletCard } from "@/components/wallet-card";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
+     Card,
+     CardContent,
+     CardDescription,
+     CardHeader,
+     CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,17 +19,17 @@ import { useRouter } from "next/navigation";
 import { LoadingSpinner, EmptyState, PageHeader } from "@/components/shared";
 
 export default function WalletPage() {
-  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [loadingDeposit, setLoadingDeposit] = useState(false);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const { showToast } = useToast();
-  const router = useRouter();
+     const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+     const [loading, setLoading] = useState(true);
+     const [loadingDeposit, setLoadingDeposit] = useState(false);
+     const [page, setPage] = useState(1);
+     const [totalPages, setTotalPages] = useState(1);
+     const { showToast } = useToast();
+     const router = useRouter();
 
-  useEffect(() => {
-    fetchTransactions();
-  }, [page]);
+     useEffect(() => {
+          fetchTransactions();
+     }, [page]);
 
      const fetchTransactions = async () => {
           try {
@@ -63,42 +63,42 @@ export default function WalletPage() {
           }
      };
 
-  const formatCurrency = (amount: number | string) => {
-    const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
-    return new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(numAmount);
-  };
+     const formatCurrency = (amount: number | string) => {
+          const numAmount = typeof amount === "string" ? parseFloat(amount) : amount;
+          return new Intl.NumberFormat("vi-VN", {
+               style: "currency",
+               currency: "VND",
+          }).format(numAmount);
+     };
 
-  const getTransactionIcon = (type: string) => {
-    const upperType = type.toUpperCase();
-    switch (upperType) {
-      case "DEPOSIT":
-      case "REFUND":
-        return <ArrowDownRight className="h-4 w-4 text-green-600" />;
-      case "WITHDRAW":
-      case "JOB_POST":
-      case "PAYMENT":
-        return <ArrowUpRight className="h-4 w-4 text-red-600" />;
-      default:
-        return <Clock className="h-4 w-4" />;
-    }
-  };
+     const getTransactionIcon = (type: string) => {
+          const upperType = type.toUpperCase();
+          switch (upperType) {
+               case "DEPOSIT":
+               case "REFUND":
+                    return <ArrowDownRight className="h-4 w-4 text-green-600" />;
+               case "WITHDRAW":
+               case "JOB_POST":
+               case "PAYMENT":
+                    return <ArrowUpRight className="h-4 w-4 text-red-600" />;
+               default:
+                    return <Clock className="h-4 w-4" />;
+          }
+     };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<
-      string,
-      "default" | "secondary" | "destructive" | "outline"
-    > = {
-      completed: "default",
-      pending: "secondary",
-      failed: "destructive",
-      cancelled: "outline",
-    };
+     const getStatusBadge = (status: string) => {
+          const variants: Record<
+               string,
+               "default" | "secondary" | "destructive" | "outline"
+          > = {
+               completed: "default",
+               pending: "secondary",
+               failed: "destructive",
+               cancelled: "outline",
+          };
 
-    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
-  };
+          return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
+     };
 
      const handleDeposit = async () => {
           try {
@@ -189,9 +189,9 @@ export default function WalletPage() {
                                                   >
                                                        <div className="flex items-center gap-4">
                                                             <div className={`p-3 rounded-xl ${transaction.transaction_type.toUpperCase() === 'DEPOSIT' ||
-                                                                      transaction.transaction_type.toUpperCase() === 'REFUND'
-                                                                      ? 'bg-green-100 dark:bg-green-900/20'
-                                                                      : 'bg-red-100 dark:bg-red-900/20'
+                                                                 transaction.transaction_type.toUpperCase() === 'REFUND'
+                                                                 ? 'bg-green-100 dark:bg-green-900/20'
+                                                                 : 'bg-red-100 dark:bg-red-900/20'
                                                                  }`}>
                                                                  {getTransactionIcon(transaction.transaction_type)}
                                                             </div>
@@ -217,9 +217,9 @@ export default function WalletPage() {
                                                        </div>
                                                        <div className="text-right space-y-2">
                                                             <p className={`font-bold text-lg ${transaction.transaction_type.toUpperCase() === 'DEPOSIT' ||
-                                                                      transaction.transaction_type.toUpperCase() === 'REFUND'
-                                                                      ? "text-green-600 dark:text-green-500"
-                                                                      : "text-red-600 dark:text-red-500"
+                                                                 transaction.transaction_type.toUpperCase() === 'REFUND'
+                                                                 ? "text-green-600 dark:text-green-500"
+                                                                 : "text-red-600 dark:text-red-500"
                                                                  }`}>
                                                                  {transaction.transaction_type.toUpperCase() === 'DEPOSIT' ||
                                                                       transaction.transaction_type.toUpperCase() === 'REFUND' ? "+" : "-"}

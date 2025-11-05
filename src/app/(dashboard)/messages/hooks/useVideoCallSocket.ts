@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { supabase } from "@/lib/supabase";
 
-const VIDEO_CALL_SERVER_URL = "http://14.169.15.9:3003";
+const VIDEO_CALL_SERVER_URL = "https://exe201-sgk6.onrender.com";
 
 export function useVideoCallSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
