@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/toast";
-import { supabase } from "@/lib/supabase";
 import {
   Users,
   Clock,
@@ -179,28 +178,7 @@ export default function EmployerApplicationsPage() {
     try {
       setActionLoading(`accept-${applicationId}`);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(`http://14.169.52.232:3003/api/applications/${applicationId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          status: 'accepted',
-          employer_notes: 'Application accepted'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to accept application');
-      }
+      await api.applications.accept(applicationId, 'Application accepted');
 
       toast.showToast("Application accepted successfully!", "success");
 
@@ -237,28 +215,7 @@ export default function EmployerApplicationsPage() {
     try {
       setActionLoading(`reject-${applicationId}`);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(`http://14.169.52.232:3003/api/applications/${applicationId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          status: 'rejected',
-          employer_notes: 'Application rejected'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to reject application');
-      }
+      await api.applications.reject(applicationId, 'Application rejected');
 
       toast.showToast("Application rejected.", "success");
 
