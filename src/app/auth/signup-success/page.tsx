@@ -16,13 +16,13 @@ function SignupSuccessContent() {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
           </svg>
         </div>
-        
+
         <h2 className="text-2xl font-semibold text-gray-900 mb-2">
           Kiểm tra email của bạn
         </h2>
-        
+
         <p className="text-gray-600 mb-6">
-          Chúng tôi đã gửi email xác thực đến <strong>{email}</strong>. 
+          Chúng tôi đã gửi email xác thực đến <strong>{email}</strong>.
           Vui lòng kiểm tra hộp thư và click vào link để kích hoạt tài khoản.
         </p>
 
@@ -36,13 +36,13 @@ function SignupSuccessContent() {
         </div>
 
         <div className="space-y-3">
-          <Link 
+          <Link
             href="/sign-up"
             className="block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
           >
             Đăng ký lại
           </Link>
-          <Link 
+          <Link
             href="/login"
             className="block text-blue-600 hover:text-blue-500 text-sm"
           >
