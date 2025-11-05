@@ -1,8 +1,9 @@
+import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Check } from "lucide-react"
+import { Calendar, DollarSign, Upload } from "lucide-react"
 
 interface Job {
     id: string
@@ -19,21 +20,26 @@ interface Job {
     status: string
     applications_count: number
     skills_required: string[]
-    rejection_reason: string | null
     createdAt: string | null
-    updatedAt: string | null
-    category_id: string | null
+}
+
+interface Application {
+    id: string
+    user_id: string
+    job_id: string
+    status: string
+    createdAt: string
+    job: Job
 }
 
 interface JobCardProps {
-    job: Job
-    searchQuery: string
-    onApply: (jobId: string, e: React.MouseEvent) => void
-    isApplying: boolean
-    isApplied: boolean
+    application: Application
 }
 
-export function JobCard({ job, searchQuery, onApply, isApplying, isApplied }: JobCardProps) {
+export function JobCard({ application }: JobCardProps) {
+    const router = useRouter()
+    const { job } = application
+
     const getJobTypeBadgeColor = (type: string) => {
         const colors: Record<string, string> = {
             FREELANCE: "bg-purple-100 text-purple-700 hover:bg-purple-100",
@@ -78,28 +84,38 @@ export function JobCard({ job, searchQuery, onApply, isApplying, isApplied }: Jo
         return colors[Math.floor(Math.random() * colors.length)]
     }
 
-    const highlightText = (text: string, query: string) => {
-        if (!query) return text
-
-        const parts = text.split(new RegExp(`(${query})`, "gi"))
-        return (
-            <>
-                {parts.map((part, index) =>
-                    part.toLowerCase() === query.toLowerCase() ? (
-                        <span key={index} className="font-bold text-primary bg-primary/10 px-1 rounded">
-                            {part}
-                        </span>
-                    ) : (
-                        <span key={index}>{part}</span>
-                    )
-                )}
-            </>
-        )
+    const getApplicationStatusBadge = (status: string) => {
+        switch (status.toLowerCase()) {
+            case "pending":
+                return (
+                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-700 hover:bg-yellow-100">
+                        Pending
+                    </Badge>
+                )
+            case "accepted":
+                return (
+                    <Badge variant="secondary" className="bg-green-100 text-green-700 hover:bg-green-100">
+                        Accepted
+                    </Badge>
+                )
+            case "rejected":
+                return (
+                    <Badge variant="secondary" className="bg-red-100 text-red-700 hover:bg-red-100">
+                        Rejected
+                    </Badge>
+                )
+            default:
+                return (
+                    <Badge variant="secondary" className="bg-gray-100 text-gray-700 hover:bg-gray-100">
+                        {status}
+                    </Badge>
+                )
+        }
     }
 
     return (
-        <Link key={job.id} href={`/find-jobs/${job.id}`}>
-            <Card className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer border-l-4 border-l-transparent hover:border-l-primary">
+        <Card className="overflow-hidden">
+            <div className="p-6">
                 <div className="flex items-start justify-between gap-6">
                     <div className="flex gap-4 flex-1">
                         <div
@@ -108,13 +124,32 @@ export function JobCard({ job, searchQuery, onApply, isApplying, isApplied }: Jo
                             {getInitials(job.title)}
                         </div>
                         <div className="flex-1 min-w-0">
-                            <h3 className="font-semibold text-lg text-foreground mb-1 line-clamp-1">
-                                {highlightText(job.title, searchQuery)}
-                            </h3>
-                            <p className="text-sm text-muted-foreground mb-2">
-                                {formatBudget(job)} • {job.budget_type === "HOURLY" ? "Per Hour" : "Fixed Price"}
-                            </p>
+                            <div className="flex items-center gap-2 mb-2">
+                                <Link href={`/find-jobs/${job.id}`} className="flex-1">
+                                    <h3 className="font-semibold text-lg text-foreground hover:text-primary transition-colors line-clamp-1">
+                                        {job.title}
+                                    </h3>
+                                </Link>
+                                {getApplicationStatusBadge(application.status)}
+                            </div>
+
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                                <div className="flex items-center gap-1">
+                                    <DollarSign className="w-4 h-4" />
+                                    <span>
+                                        {formatBudget(job)} • {job.budget_type === "HOURLY" ? "Per Hour" : "Fixed Price"}
+                                    </span>
+                                </div>
+                                {job.deadline && (
+                                    <div className="flex items-center gap-1">
+                                        <Calendar className="w-4 h-4" />
+                                        <span>Deadline: {new Date(job.deadline).toLocaleDateString("en-US")}</span>
+                                    </div>
+                                )}
+                            </div>
+
                             <p className="text-sm text-muted-foreground mb-3 line-clamp-2">{job.description}</p>
+
                             <div className="flex flex-wrap gap-2">
                                 <Badge variant="secondary" className={getJobTypeBadgeColor(job.job_type)}>
                                     {job.job_type.replace("_", " ")}
@@ -122,8 +157,12 @@ export function JobCard({ job, searchQuery, onApply, isApplying, isApplied }: Jo
                                 <Badge variant="secondary" className={getExperienceLevelBadgeColor(job.experience_level)}>
                                     {job.experience_level}
                                 </Badge>
-                                {job.skills_required?.slice(0, 3).map((skill: string, index: number) => (
-                                    <Badge key={index} variant="secondary" className="bg-primary/10 text-primary hover:bg-primary/10">
+                                {job.skills_required?.slice(0, 3).map((skill, index) => (
+                                    <Badge
+                                        key={index}
+                                        variant="secondary"
+                                        className="bg-primary/10 text-primary hover:bg-primary/10"
+                                    >
                                         {skill}
                                     </Badge>
                                 ))}
@@ -135,35 +174,21 @@ export function JobCard({ job, searchQuery, onApply, isApplying, isApplied }: Jo
                             </div>
                         </div>
                     </div>
-                    <div className="text-right flex flex-col gap-2 items-end min-w-[120px]">
-                        {isApplied ? (
-                            <Button
-                                className="w-full bg-green-600 hover:bg-green-700 text-white cursor-default"
-                                disabled
-                            >
-                                <Check className="w-4 h-4 mr-1" />
-                                Applied
-                            </Button>
-                        ) : (
-                            <Button
-                                className="w-full bg-primary text-primary-foreground hover:bg-primary/90"
-                                onClick={(e) => onApply(job.id, e)}
-                                disabled={isApplying}
-                            >
-                                {isApplying ? "Applying..." : "Apply"}
-                            </Button>
-                        )}
-                        <p className="text-xs text-muted-foreground">
-                            <span className="font-semibold text-foreground">{job.applications_count} applied</span>
-                        </p>
-                        {job.deadline && (
-                            <p className="text-xs text-muted-foreground">
-                                Deadline: {new Date(job.deadline).toLocaleDateString("vi-VN")}
-                            </p>
-                        )}
+
+                    <div className="flex flex-col gap-2 min-w-[160px]">
+                        <Button
+                            onClick={() => router.push(`/find-jobs/${job.id}`)}
+                            className="w-full bg-primary hover:bg-primary/90"
+                        >
+                            <Upload className="w-4 h-4 mr-2" />
+                            View & Upload
+                        </Button>
+                        <div className="text-xs text-center text-muted-foreground mt-2">
+                            Applied: {new Date(application.createdAt).toLocaleDateString("en-US")}
+                        </div>
                     </div>
                 </div>
-            </Card>
-        </Link>
+            </div>
+        </Card>
     )
 }

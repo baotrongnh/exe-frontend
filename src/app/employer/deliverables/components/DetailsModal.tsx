@@ -18,23 +18,31 @@ import {
     AlertCircle,
 } from "lucide-react";
 
+interface ProductFile {
+    name: string;
+    path: string;
+    size: number;
+    mimetype: string;
+}
+
 interface Deliverable {
     id: string;
     job_id: string;
-    freelancer_id: string;
+    applicant_id: string;
     title: string;
     description: string;
-    status: "pending" | "approved" | "rejected" | "revision_requested";
-    files: string[];
-    submitted_at: string;
-    reviewed_at?: string;
-    rejection_reason?: string;
-    revision_notes?: string;
+    status: "pending" | "approved" | "rejected";
+    files: ProductFile[];
+    created_at: string;
+    reviewed_at?: string | null;
+    rejection_reason?: string | null;
+    reviewed_by?: string | null;
+    updated_at: string;
     job?: {
         id: string;
         title: string;
     };
-    freelancer?: {
+    applicant?: {
         id: string;
         full_name: string;
         email: string;
@@ -45,7 +53,7 @@ interface DetailsModalProps {
     isOpen: boolean;
     onClose: () => void;
     deliverable: Deliverable | null;
-    onDownloadFile: (fileName: string) => void;
+    onDownloadFile: (fileUrl: string, fileName: string, productId: string, fileIndex: number) => void;
     formatDate: (dateString: string) => string;
     getStatusColor: (status: string) => string;
 }
@@ -97,15 +105,15 @@ export function DetailsModal({
                                 <User className="w-4 h-4" />
                                 <span className="font-medium">Freelancer</span>
                             </div>
-                            <p className="text-gray-900 font-semibold">{deliverable.freelancer?.full_name}</p>
-                            <p className="text-sm text-gray-600">{deliverable.freelancer?.email}</p>
+                            <p className="text-gray-900 font-semibold">{deliverable.applicant?.full_name || "Unknown"}</p>
+                            <p className="text-sm text-gray-600">{deliverable.applicant?.email || "N/A"}</p>
                         </div>
                         <div className="bg-gray-50 rounded-lg p-4 border border-gray-200">
                             <div className="flex items-center gap-2 text-sm text-gray-600 mb-1">
                                 <Briefcase className="w-4 h-4" />
                                 <span className="font-medium">Job</span>
                             </div>
-                            <p className="text-gray-900 font-semibold">{deliverable.job?.title}</p>
+                            <p className="text-gray-900 font-semibold">{deliverable.job?.title || "Unknown Job"}</p>
                         </div>
                     </div>
 
@@ -113,8 +121,8 @@ export function DetailsModal({
                     <div className="flex items-center gap-2 text-sm text-gray-600">
                         <Calendar className="w-4 h-4" />
                         <span>
-                            Submitted on {new Date(deliverable.submitted_at).toLocaleDateString()} at{" "}
-                            {new Date(deliverable.submitted_at).toLocaleTimeString()}
+                            Submitted on {new Date(deliverable.created_at).toLocaleDateString()} at{" "}
+                            {new Date(deliverable.created_at).toLocaleTimeString()}
                         </span>
                     </div>
 
@@ -138,17 +146,22 @@ export function DetailsModal({
                                         key={index}
                                         className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
                                     >
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                                        <div className="flex items-center gap-3 flex-1 min-w-0">
+                                            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
                                                 <FileText className="w-5 h-5 text-indigo-600" />
                                             </div>
-                                            <span className="font-medium text-gray-900">{file}</span>
+                                            <div className="flex-1 min-w-0">
+                                                <p className="font-medium text-gray-900 truncate">{file.name}</p>
+                                                <p className="text-xs text-gray-500">
+                                                    {(file.size / 1024).toFixed(1)} KB • {file.mimetype}
+                                                </p>
+                                            </div>
                                         </div>
                                         <Button
                                             size="sm"
                                             variant="outline"
-                                            onClick={() => onDownloadFile(file)}
-                                            className="gap-2"
+                                            onClick={() => onDownloadFile(file.path, file.name, deliverable.id, index)}
+                                            className="gap-2 flex-shrink-0"
                                         >
                                             <Download className="w-4 h-4" />
                                             Download

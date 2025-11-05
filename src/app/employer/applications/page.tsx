@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/toast";
+import { supabase } from "@/lib/supabase";
 import {
   Users,
   Clock,
-  CheckCircle,
-  MessageCircle,
   CircleCheck,
   XCircle,
   FileText,
@@ -35,7 +35,7 @@ interface Application {
   proposed_rate: number | null;
   proposed_timeline: string | null;
   portfolio_links: string[];
-  status: "pending" | "shortlisted" | "interviewing" | "accepted" | "rejected";
+  status: "pending" | "accepted" | "rejected";
   employer_notes: string | null;
   rejection_reason: string | null;
   createdAt: string;
@@ -66,6 +66,7 @@ export default function EmployerApplicationsPage() {
 
   const { user } = useAuth();
   const router = useRouter();
+  const toast = useToast();
 
   // Check authentication and verification status
   useEffect(() => {
@@ -190,6 +191,122 @@ export default function EmployerApplicationsPage() {
     }
   };
 
+  // Handle Accept Application
+  const handleAccept = async (applicationId: string) => {
+    try {
+      setActionLoading(`accept-${applicationId}`);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`http://14.169.52.232:3003/api/applications/${applicationId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: 'accepted',
+          employer_notes: 'Application accepted'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to accept application');
+      }
+
+      toast.showToast("Application accepted successfully!", "success");
+
+      // Refresh applications
+      const jobsResponse = await api.jobs.getMyJobs();
+      if (jobsResponse.success && jobsResponse.data) {
+        const allApplications: Application[] = [];
+        for (const job of jobsResponse.data) {
+          try {
+            const appResponse = await api.applications.getJobApplications(job.id);
+            if (appResponse.success && appResponse.data) {
+              const appsWithJob = appResponse.data.map((app: Application) => ({
+                ...app,
+                job: { id: job.id, title: job.title },
+              }));
+              allApplications.push(...appsWithJob);
+            }
+          } catch (error) {
+            console.error(`Error fetching applications for job ${job.id}:`, error);
+          }
+        }
+        setApplications(allApplications);
+      }
+    } catch (error) {
+      console.error("Error accepting application:", error);
+      toast.showToast("Failed to accept application. Please try again.", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  // Handle Reject Application
+  const handleReject = async (applicationId: string) => {
+    try {
+      setActionLoading(`reject-${applicationId}`);
+
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        throw new Error('No authentication token found');
+      }
+
+      const response = await fetch(`http://14.169.52.232:3003/api/applications/${applicationId}/status`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          status: 'rejected',
+          employer_notes: 'Application rejected'
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to reject application');
+      }
+
+      toast.showToast("Application rejected.", "success");
+
+      // Refresh applications
+      const jobsResponse = await api.jobs.getMyJobs();
+      if (jobsResponse.success && jobsResponse.data) {
+        const allApplications: Application[] = [];
+        for (const job of jobsResponse.data) {
+          try {
+            const appResponse = await api.applications.getJobApplications(job.id);
+            if (appResponse.success && appResponse.data) {
+              const appsWithJob = appResponse.data.map((app: Application) => ({
+                ...app,
+                job: { id: job.id, title: job.title },
+              }));
+              allApplications.push(...appsWithJob);
+            }
+          } catch (error) {
+            console.error(`Error fetching applications for job ${job.id}:`, error);
+          }
+        }
+        setApplications(allApplications);
+      }
+    } catch (error) {
+      console.error("Error rejecting application:", error);
+      toast.showToast("Failed to reject application. Please try again.", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   // Handle Schedule Interview - Create conversation with applicant
   const handleScheduleInterview = async (applicationId: string, freelancerId: string, jobId: string) => {
     try {
@@ -211,14 +328,14 @@ export default function EmployerApplicationsPage() {
 
       console.log("Conversation created successfully:", response);
 
-      alert("Interview scheduled! A conversation has been created.");
+      toast.showToast("Interview scheduled! A conversation has been created.", "success");
 
       // Optionally navigate to the conversation page
       // router.push(`/employer/messages?conversation=${response.data.id}`);
 
     } catch (error) {
       console.error("Error scheduling interview:", error);
-      alert("Failed to schedule interview. Please try again.");
+      toast.showToast("Failed to schedule interview. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
@@ -232,8 +349,6 @@ export default function EmployerApplicationsPage() {
 
   const allCount = applications.length;
   const pendingCount = applications.filter((app) => app.status === "pending").length;
-  const shortlistedCount = applications.filter((app) => app.status === "shortlisted").length;
-  const interviewingCount = applications.filter((app) => app.status === "interviewing").length;
   const acceptedCount = applications.filter((app) => app.status === "accepted").length;
   const rejectedCount = applications.filter((app) => app.status === "rejected").length;
 
@@ -241,12 +356,8 @@ export default function EmployerApplicationsPage() {
     switch (status) {
       case "pending":
         return "bg-blue-100 text-blue-800";
-      case "shortlisted":
-        return "bg-green-100 text-green-800";
-      case "interviewing":
-        return "bg-yellow-100 text-yellow-800";
       case "accepted":
-        return "bg-purple-100 text-purple-800";
+        return "bg-green-100 text-green-800";
       case "rejected":
         return "bg-red-100 text-red-800";
       default:
@@ -275,7 +386,7 @@ export default function EmployerApplicationsPage() {
         </div>
 
         {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="bg-gradient-to-br from-white to-gray-50 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-gray-200 p-5 cursor-pointer" onClick={() => setSelectedTab("all")}>
             <div className="flex items-center justify-between mb-3">
               <div className="text-sm font-medium text-gray-600">All Applications</div>
@@ -293,24 +404,6 @@ export default function EmployerApplicationsPage() {
               </div>
             </div>
             <div className="text-3xl font-bold text-blue-600">{pendingCount}</div>
-          </div>
-          <div className="bg-gradient-to-br from-green-50 to-green-100 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-green-200 p-5 cursor-pointer" onClick={() => setSelectedTab("shortlisted")}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-medium text-green-700">Shortlisted</div>
-              <div className="w-10 h-10 bg-green-200 rounded-lg flex items-center justify-center">
-                <Check className="w-5 h-5 text-green-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-green-600">{shortlistedCount}</div>
-          </div>
-          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-yellow-200 p-5 cursor-pointer" onClick={() => setSelectedTab("interviewing")}>
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-medium text-yellow-700">Interviewing</div>
-              <div className="w-10 h-10 bg-yellow-200 rounded-lg flex items-center justify-center">
-                <MessageCircle className="w-5 h-5 text-yellow-600" />
-              </div>
-            </div>
-            <div className="text-3xl font-bold text-yellow-600">{interviewingCount}</div>
           </div>
           <div className="bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl shadow-sm hover:shadow-md transition-shadow border border-purple-200 p-5 cursor-pointer" onClick={() => setSelectedTab("accepted")}>
             <div className="flex items-center justify-between mb-3">
@@ -359,8 +452,6 @@ export default function EmployerApplicationsPage() {
               {[
                 { key: "all", label: "All", count: allCount },
                 { key: "pending", label: "Pending", count: pendingCount },
-                { key: "shortlisted", label: "Shortlisted", count: shortlistedCount },
-                { key: "interviewing", label: "Interviewing", count: interviewingCount },
                 { key: "accepted", label: "Accepted", count: acceptedCount },
                 { key: "rejected", label: "Rejected", count: rejectedCount },
               ].map((tab) => (
@@ -368,8 +459,8 @@ export default function EmployerApplicationsPage() {
                   key={tab.key}
                   onClick={() => setSelectedTab(tab.key)}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap rounded-t-lg ${selectedTab === tab.key
-                      ? "border-indigo-600 text-indigo-600 bg-indigo-50"
-                      : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "border-indigo-600 text-indigo-600 bg-indigo-50"
+                    : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                 >
                   {tab.label} <span className="ml-1.5 px-2 py-0.5 rounded-full text-xs bg-gray-200">{tab.count}</span>
@@ -457,9 +548,23 @@ export default function EmployerApplicationsPage() {
                       </span>
                       {application.status === "pending" && (
                         <div className="flex flex-col gap-2 mt-2">
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-40 shadow-md hover:shadow-lg transition-all">
-                            <Check className="w-4 h-4 mr-2" />
-                            Shortlist
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white w-40 shadow-md hover:shadow-lg transition-all"
+                            onClick={() => handleAccept(application.id)}
+                            disabled={actionLoading === `accept-${application.id}`}
+                          >
+                            {actionLoading === `accept-${application.id}` ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Accepting...
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4 mr-2" />
+                                Accept
+                              </>
+                            )}
                           </Button>
                           <Button
                             size="sm"
@@ -484,41 +589,26 @@ export default function EmployerApplicationsPage() {
                               </>
                             )}
                           </Button>
-                          <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-white w-40 shadow-sm border-red-200">
-                            <X className="w-4 h-4 mr-2" />
-                            Reject
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-white w-40 shadow-sm border-red-200"
+                            onClick={() => handleReject(application.id)}
+                            disabled={actionLoading === `reject-${application.id}`}
+                          >
+                            {actionLoading === `reject-${application.id}` ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Rejecting...
+                              </>
+                            ) : (
+                              <>
+                                <X className="w-4 h-4 mr-2" />
+                                Reject
+                              </>
+                            )}
                           </Button>
                         </div>
-                      )}
-                      {application.status === "shortlisted" && (
-                        <Button
-                          size="sm"
-                          className="bg-indigo-600 hover:bg-indigo-700 text-white w-40 mt-2 shadow-md hover:shadow-lg transition-all"
-                          onClick={() => handleScheduleInterview(
-                            application.id,
-                            application.applicant_id,
-                            application.job_id
-                          )}
-                          disabled={actionLoading === `interview-${application.id}`}
-                        >
-                          {actionLoading === `interview-${application.id}` ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                              Creating...
-                            </>
-                          ) : (
-                            <>
-                              <Calendar className="w-4 h-4 mr-2" />
-                              Interview
-                            </>
-                          )}
-                        </Button>
-                      )}
-                      {application.status === "interviewing" && (
-                        <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white w-40 mt-2 shadow-md hover:shadow-lg transition-all">
-                          <CheckCircle className="w-4 h-4 mr-2" />
-                          Make Offer
-                        </Button>
                       )}
                     </div>
                   </div>

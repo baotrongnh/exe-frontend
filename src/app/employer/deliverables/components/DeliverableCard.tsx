@@ -14,23 +14,31 @@ import {
     AlertCircle,
 } from "lucide-react";
 
+interface ProductFile {
+    name: string;
+    path: string;
+    size: number;
+    mimetype: string;
+}
+
 interface Deliverable {
     id: string;
     job_id: string;
-    freelancer_id: string;
+    applicant_id: string;
     title: string;
     description: string;
-    status: "pending" | "approved" | "rejected" | "revision_requested";
-    files: string[];
-    submitted_at: string;
-    reviewed_at?: string;
-    rejection_reason?: string;
-    revision_notes?: string;
+    status: "pending" | "approved" | "rejected";
+    files: ProductFile[];
+    created_at: string;
+    reviewed_at?: string | null;
+    rejection_reason?: string | null;
+    reviewed_by?: string | null;
+    updated_at: string;
     job?: {
         id: string;
         title: string;
     };
-    freelancer?: {
+    applicant?: {
         id: string;
         full_name: string;
         email: string;
@@ -42,7 +50,7 @@ interface DeliverableCardProps {
     onApprove: (id: string) => void;
     onReject: (deliverable: Deliverable) => void;
     onViewDetails: (deliverable: Deliverable) => void;
-    onDownloadFile: (fileName: string) => void;
+    onDownloadFile: (fileUrl: string, fileName: string, productId: string, fileIndex: number) => void;
     actionLoading: string | null;
     formatDate: (dateString: string) => string;
     getStatusColor: (status: string) => string;
@@ -66,7 +74,7 @@ export function DeliverableCard({
                     <div className="flex items-start gap-4 mb-4">
                         <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0">
                             <span className="text-indigo-600 font-semibold text-lg">
-                                {deliverable.freelancer?.full_name.charAt(0).toUpperCase()}
+                                {deliverable.applicant?.full_name?.charAt(0).toUpperCase() || "F"}
                             </span>
                         </div>
                         <div className="flex-1">
@@ -82,17 +90,19 @@ export function DeliverableCard({
                                 </span>
                             </div>
                             <div className="flex flex-wrap items-center gap-4 text-sm text-gray-600">
-                                <div className="flex items-center gap-1.5">
-                                    <User className="w-4 h-4" />
-                                    <span className="font-medium">{deliverable.freelancer?.full_name}</span>
-                                </div>
+                                {deliverable.applicant?.full_name && (
+                                    <div className="flex items-center gap-1.5">
+                                        <User className="w-4 h-4" />
+                                        <span className="font-medium">{deliverable.applicant.full_name}</span>
+                                    </div>
+                                )}
                                 <div className="flex items-center gap-1.5">
                                     <Briefcase className="w-4 h-4" />
-                                    <span>{deliverable.job?.title}</span>
+                                    <span>{deliverable.job?.title || "Unknown Job"}</span>
                                 </div>
                                 <div className="flex items-center gap-1.5">
                                     <Calendar className="w-4 h-4" />
-                                    <span>Submitted {formatDate(deliverable.submitted_at)}</span>
+                                    <span>Submitted {formatDate(deliverable.created_at)}</span>
                                 </div>
                             </div>
                         </div>
@@ -114,11 +124,12 @@ export function DeliverableCard({
                                 {deliverable.files.map((file, index) => (
                                     <button
                                         key={index}
-                                        onClick={() => onDownloadFile(file)}
+                                        onClick={() => onDownloadFile(file.path, file.name, deliverable.id, index)}
                                         className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 transition-colors group/file"
                                     >
                                         <FileText className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">{file}</span>
+                                        <span className="font-medium">{file.name}</span>
+                                        <span className="text-xs text-gray-500">({(file.size / 1024).toFixed(1)} KB)</span>
                                         <Download className="w-3.5 h-3.5 text-gray-400 group-hover/file:text-indigo-600 transition-colors" />
                                     </button>
                                 ))}
