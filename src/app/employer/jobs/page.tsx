@@ -205,8 +205,8 @@ export default function MyJobsPage() {
                   key={tab.key}
                   onClick={() => setActiveTab(tab.key as "all" | "active" | "pending" | "closed")}
                   className={`px-4 py-2 text-sm font-medium border-b-2 transition-all whitespace-nowrap rounded-t-lg ${activeTab === tab.key
-                      ? "border-indigo-600 text-indigo-600 bg-indigo-50"
-                      : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
+                    ? "border-indigo-600 text-indigo-600 bg-indigo-50"
+                    : "border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
                 >
                   {tab.label}{" "}
@@ -255,11 +255,17 @@ export default function MyJobsPage() {
             ) : (
               <div className={viewMode === "grid" ? "grid grid-cols-1 md:grid-cols-2 gap-4 p-6" : "divide-y divide-gray-100"}>
                 {filteredJobs.map((job) => (
-                  <div key={job.id} className={`${viewMode === "list" ? "p-6 hover:bg-gradient-to-r hover:from-indigo-50/30 hover:to-transparent" : "border border-gray-200 rounded-lg p-6"} transition-all duration-200`}>
+                  <div
+                    key={job.id}
+                    className={`${viewMode === "list" ? "p-6 hover:bg-gradient-to-r hover:from-indigo-50/30 hover:to-transparent" : "border border-gray-200 rounded-lg p-6"} transition-all duration-200 cursor-pointer group`}
+                    onClick={() => router.push(`/employer/jobs/${job.id}`)}
+                  >
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <div className="flex items-center gap-3 mb-2">
-                          <h3 className="text-lg font-semibold text-gray-900">{job.title}</h3>
+                          <Link href={`/employer/jobs/${job.id}`} className="hover:text-indigo-600 transition-colors">
+                            <h3 className="text-lg font-semibold text-gray-900 group-hover:text-indigo-600 transition-colors">{job.title}</h3>
+                          </Link>
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(job.status)}`}>{job.status.charAt(0).toUpperCase() + job.status.slice(1)}</span>
                         </div>
                         <div className="flex items-center gap-4 text-sm text-gray-600">
@@ -277,7 +283,10 @@ export default function MyJobsPage() {
                           </span>
                         </div>
                       </div>
-                      <button className="text-gray-400 hover:text-gray-600">
+                      <button
+                        className="text-gray-400 hover:text-gray-600"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" />
                         </svg>
@@ -301,11 +310,25 @@ export default function MyJobsPage() {
                     </div>
 
                     <div className="flex items-center gap-3">
-                      <Link href={`/employer/applications?job=${job.id}`} className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all text-center">
+                      <Link
+                        href={`/employer/applications?job=${job.id}`}
+                        className="flex-1 px-4 py-2.5 bg-indigo-600 text-white rounded-lg text-sm font-semibold hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all text-center"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         View Applications
                       </Link>
-                      <button className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">Edit</button>
-                      <button className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">{job.status === "active" ? "Close" : "Reopen"}</button>
+                      <button
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        className="px-4 py-2.5 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {job.status === "active" ? "Close" : "Reopen"}
+                      </button>
                     </div>
                   </div>
                 ))}
