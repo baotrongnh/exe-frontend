@@ -7,6 +7,7 @@ import { authHelpers } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { FiArrowLeft } from "react-icons/fi"
+import LoadingScreen from "@/components/LoadingScreen"
 
 function LoginContent() {
      const [isLoading, setIsLoading] = useState(false)
@@ -16,10 +17,15 @@ function LoginContent() {
      const searchParams = useSearchParams()
      const { user, loading } = useAuth()
 
-     // Redirect nếu user đã đăng nhập
+     // Redirect nếu user đã đăng nhập based on role
      useEffect(() => {
           if (!loading && user) {
-               router.push('/find-jobs')
+               const role = user.user_metadata?.role
+               if (role === 'employer') {
+                    router.push('/employer/dashboard')
+               } else {
+                    router.push('/find-jobs')
+               }
           }
      }, [user, loading, router])
 
@@ -33,11 +39,7 @@ function LoginContent() {
 
      // Hiển thị loading trong khi kiểm tra auth state
      if (loading) {
-          return (
-               <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-               </div>
-          )
+          return <LoadingScreen />
      }
 
      // Nếu user đã đăng nhập, không hiển thị form

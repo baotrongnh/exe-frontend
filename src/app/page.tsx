@@ -2,7 +2,13 @@
 
 import Navbar from "@/components/Navbar"
 import Link from "next/link"
-import { useState } from "react"
+import Image from "next/image"
+import { useState, FormEvent } from "react"
+
+interface SearchData {
+  searchTerm: string
+  location: string
+}
 
 function handleSearch(searchData: any) {
   // TODO: Implement search functionality
@@ -132,9 +138,11 @@ export default function LandingPage() {
 
             <div className="relative flex justify-center lg:justify-end">
               <div className="relative">
-                <img
+                <Image
                   src="/images/professional-man.png"
                   alt="Professional man pointing"
+                  width={448}
+                  height={600}
                   className="w-full max-w-md h-auto relative z-10"
                 />
                 {/* Stats card */}
@@ -160,7 +168,7 @@ export default function LandingPage() {
                       <div className="font-bold text-sm text-gray-900">Karen Sandler</div>
                       <div className="text-xs text-gray-600 mb-2">Lead Engineer at Canva</div>
                       <div className="text-sm text-gray-700 italic">
-                        "Great platform for the job seeker that searching for new career heights."
+                        &ldquo;Great platform for the job seeker that searching for new career heights.&rdquo;
                       </div>
                     </div>
                   </div>
@@ -284,9 +292,11 @@ export default function LandingPage() {
               </button>
             </div>
             <div>
-              <img
+              <Image
                 src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/image-2FVncIPuQfdBsYXDUolZXajVDCSY2B.png"
                 alt="Dashboard preview"
+                width={800}
+                height={600}
                 className="w-full h-auto"
               />
             </div>

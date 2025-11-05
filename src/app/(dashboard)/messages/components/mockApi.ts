@@ -33,7 +33,8 @@ const mockApiConversations: ApiConversation[] = [
         id: '8ec03c31-c317-46a6-970a-168f8a352cfa', // Using your real conversation ID
         otherUser: {
             id: '4ffbbc49-d145-4849-aaa6-4c23516ff43b',
-            name: 'Mobile Developer',
+            email: 'developer@example.com',
+            full_name: 'Mobile Developer',
             avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format'
         },
         job: {
@@ -53,7 +54,8 @@ const mockApiConversations: ApiConversation[] = [
         id: '1',
         otherUser: {
             id: '1',
-            name: 'Jan Mayer',
+            email: 'jan.mayer@example.com',
+            full_name: 'Jan Mayer',
             avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face&auto=format'
         },
         job: {
@@ -73,7 +75,8 @@ const mockApiConversations: ApiConversation[] = [
         id: '2',
         otherUser: {
             id: '2',
-            name: 'Joe Bartmann',
+            email: 'joe.bartmann@example.com',
+            full_name: 'Joe Bartmann',
             avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face&auto=format'
         },
         job: {
@@ -93,7 +96,8 @@ const mockApiConversations: ApiConversation[] = [
         id: '3',
         otherUser: {
             id: '3',
-            name: 'Ally Wales',
+            email: 'ally.wales@example.com',
+            full_name: 'Ally Wales',
             avatar_url: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face&auto=format'
         },
         job: {
@@ -230,10 +234,19 @@ const mockApiMessages: Record<string, ApiMessage[]> = {
 function transformConversationToThread(conversation: ApiConversation): MessageThread {
     const unreadCount = conversation.lastMessage?.is_read ? 0 : 1
 
+    // Debug avatar handling
+    console.log('🖼️ Transforming conversation - Avatar data:', {
+        conversationId: conversation.id,
+        otherUserId: conversation.otherUser?.id,
+        otherUserName: conversation.otherUser?.full_name,
+        avatar_url: conversation.otherUser?.avatar_url,
+        fullOtherUser: conversation.otherUser
+    })
+
     return {
         id: conversation.id,
         candidateId: conversation.otherUser?.id || '',
-        candidateName: conversation.otherUser?.name || 'Unknown User',
+        candidateName: conversation.otherUser?.full_name || conversation.otherUser?.email || 'Unknown User',
         candidateTitle: conversation.job?.title || 'Candidate',
         candidateAvatar: conversation.otherUser?.avatar_url || '',
         lastMessage: conversation.lastMessage?.content || 'No messages',
@@ -546,7 +559,7 @@ export async function getCandidateById(candidateId: string): Promise<Candidate |
     if (conversation && conversation.otherUser) {
         return {
             id: conversation.otherUser.id || candidateId,
-            name: conversation.otherUser.name || 'Unknown User',
+            name: conversation.otherUser.full_name || conversation.otherUser.email || 'Unknown User',
             title: conversation.job?.title || 'Candidate',
             avatar: conversation.otherUser.avatar_url || '',
             profileUrl: `/candidates/${candidateId}`

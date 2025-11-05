@@ -1,74 +1,71 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, useCallback } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { adminDashboardApi } from "@/lib/admin-dashboard-api"
+import type { UsersData } from "@/types/admin"
 
 export default function UsersPage() {
      const [searchQuery, setSearchQuery] = useState("")
+     const [usersData, setUsersData] = useState<UsersData | null>(null)
+     const [loading, setLoading] = useState(true)
+     const [error, setError] = useState<string | null>(null)
+     const [currentPage, setCurrentPage] = useState(1)
 
-     const users = [
-          {
-               id: 1,
-               name: "Jake Gyll",
-               email: "jakegyll@email.com",
-               role: "Job Seeker",
-               status: "Active",
-               joinDate: "Jan 15, 2024",
-               applications: 12,
-          },
-          {
-               id: 2,
-               name: "Sarah Johnson",
-               email: "sarah.j@email.com",
-               role: "Job Seeker",
-               status: "Active",
-               joinDate: "Feb 3, 2024",
-               applications: 8,
-          },
-          {
-               id: 3,
-               name: "Michael Chen",
-               email: "mchen@email.com",
-               role: "Employer",
-               status: "Active",
-               joinDate: "Dec 20, 2023",
-               applications: 0,
-          },
-          {
-               id: 4,
-               name: "Emily Davis",
-               email: "emily.davis@email.com",
-               role: "Job Seeker",
-               status: "Suspended",
-               joinDate: "Mar 10, 2024",
-               applications: 3,
-          },
-          {
-               id: 5,
-               name: "David Wilson",
-               email: "dwilson@email.com",
-               role: "Employer",
-               status: "Active",
-               joinDate: "Jan 5, 2024",
-               applications: 0,
-          },
-          {
-               id: 6,
-               name: "Lisa Anderson",
-               email: "lisa.a@email.com",
-               role: "Job Seeker",
-               status: "Active",
-               joinDate: "Feb 28, 2024",
-               applications: 15,
-          },
-     ]
+     const fetchUsers = useCallback(async () => {
+          try {
+               setLoading(true)
+               const response = await adminDashboardApi.getUsers({
+                    page: currentPage,
+                    limit: 20,
+                    search: searchQuery || undefined,
+               })
+               setUsersData(response.data)
+               setError(null)
+          } catch (err) {
+               console.error("Error fetching users:", err)
+               setError("Failed to load users. Please try again.")
+          } finally {
+               setLoading(false)
+          }
+     }, [currentPage, searchQuery])
 
-     const filteredUsers = users.filter(
-          (user) =>
-               user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-               user.email.toLowerCase().includes(searchQuery.toLowerCase()),
-     )
+     useEffect(() => {
+          fetchUsers()
+     }, [fetchUsers])
+
+     const users = usersData?.users || []
+     const pagination = usersData?.pagination || {
+          total: 0,
+          page: 1,
+          limit: 20,
+          pages: 1,
+     }
+
+     // Calculate stats
+     const totalUsers = pagination.total
+     const activeUsers = users.filter((u) => u.email_confirmed).length
+     const jobSeekers = users.filter((u) => !u.role || u.role === "freelancer").length
+     const employers = users.filter((u) => u.role === "employer").length
+
+     if (loading) {
+          return (
+               <div className="p-8 flex items-center justify-center min-h-screen">
+                    <div className="text-gray-600">Loading users...</div>
+               </div>
+          )
+     }
+
+     if (error) {
+          return (
+               <div className="p-8">
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
+                         {error}
+                    </div>
+               </div>
+          )
+     }
 
      return (
           <div className="p-8">
@@ -81,19 +78,19 @@ export default function UsersPage() {
                <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                     <div className="bg-white rounded-lg border border-gray-200 p-6">
                          <div className="text-sm text-gray-600 mb-1">Total Users</div>
-                         <div className="text-2xl font-bold text-gray-900">2,543</div>
+                         <div className="text-2xl font-bold text-gray-900">{totalUsers}</div>
                     </div>
                     <div className="bg-white rounded-lg border border-gray-200 p-6">
                          <div className="text-sm text-gray-600 mb-1">Active Users</div>
-                         <div className="text-2xl font-bold text-green-600">2,401</div>
+                         <div className="text-2xl font-bold text-green-600">{activeUsers}</div>
                     </div>
                     <div className="bg-white rounded-lg border border-gray-200 p-6">
-                         <div className="text-sm text-gray-600 mb-1">Job Seekers</div>
-                         <div className="text-2xl font-bold text-gray-900">2,198</div>
+                         <div className="text-sm text-gray-600 mb-1">Freelancer</div>
+                         <div className="text-2xl font-bold text-gray-900">{jobSeekers}</div>
                     </div>
                     <div className="bg-white rounded-lg border border-gray-200 p-6">
                          <div className="text-sm text-gray-600 mb-1">Employers</div>
-                         <div className="text-2xl font-bold text-gray-900">345</div>
+                         <div className="text-2xl font-bold text-gray-900">{employers}</div>
                     </div>
                </div>
 
@@ -165,7 +162,7 @@ export default function UsersPage() {
                                              Join Date
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                             Applications
+                                             Activity
                                         </th>
                                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                              Actions
@@ -173,52 +170,82 @@ export default function UsersPage() {
                                    </tr>
                               </thead>
                               <tbody className="bg-white divide-y divide-gray-200">
-                                   {filteredUsers.map((user) => (
-                                        <tr key={user.id} className="hover:bg-gray-50">
-                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                  <div className="flex items-center gap-3">
-                                                       <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                                                            <span className="text-indigo-600 font-semibold text-sm">
-                                                                 {user.name
-                                                                      .split(" ")
-                                                                      .map((n) => n[0])
-                                                                      .join("")}
-                                                            </span>
-                                                       </div>
-                                                       <div>
-                                                            <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                                                            <div className="text-sm text-gray-500">{user.email}</div>
-                                                       </div>
-                                                  </div>
-                                             </td>
-                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                  <span className="text-sm text-gray-900">{user.role}</span>
-                                             </td>
-                                             <td className="px-6 py-4 whitespace-nowrap">
-                                                  <span
-                                                       className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.status === "Active" ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"
-                                                            }`}
-                                                  >
-                                                       {user.status}
-                                                  </span>
-                                             </td>
-                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.joinDate}</td>
-                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.applications}</td>
-                                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                                                  <div className="flex items-center gap-2">
-                                                       <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700">
-                                                            View
-                                                       </Button>
-                                                       <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-700">
-                                                            Edit
-                                                       </Button>
-                                                       <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                                                            {user.status === "Active" ? "Suspend" : "Activate"}
-                                                       </Button>
-                                                  </div>
+                                   {users.length === 0 ? (
+                                        <tr>
+                                             <td colSpan={6} className="px-6 py-8 text-center text-gray-500">
+                                                  No users found
                                              </td>
                                         </tr>
-                                   ))}
+                                   ) : (
+                                        users.map((user) => (
+                                             <tr key={user.id} className="hover:bg-gray-50">
+                                                  <td className="px-6 py-4 whitespace-nowrap">
+                                                       <div className="flex items-center gap-3">
+                                                            <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
+                                                                 <span className="text-indigo-600 font-semibold text-sm">
+                                                                      {user.full_name
+                                                                           .split(" ")
+                                                                           .map((n) => n[0])
+                                                                           .join("")
+                                                                           .toUpperCase()
+                                                                           .slice(0, 2)}
+                                                                 </span>
+                                                            </div>
+                                                            <div>
+                                                                 <div className="text-sm font-medium text-gray-900">{user.full_name}</div>
+                                                                 <div className="text-sm text-gray-500">{user.email}</div>
+                                                            </div>
+                                                       </div>
+                                                  </td>
+                                                  <td className="px-6 py-4 whitespace-nowrap">
+                                                       <span className="text-sm text-gray-900">
+                                                            {user.role ? user.role.charAt(0).toUpperCase() + user.role.slice(1) : "Freelancer"}
+                                                       </span>
+                                                  </td>
+                                                  <td className="px-6 py-4 whitespace-nowrap">
+                                                       <span
+                                                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${user.email_confirmed ? "bg-green-100 text-green-800" : "bg-yellow-100 text-yellow-800"
+                                                                 }`}
+                                                       >
+                                                            {user.email_confirmed ? "Active" : "Pending"}
+                                                       </span>
+                                                  </td>
+                                                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                                       {new Date(user.created_at).toLocaleDateString("en-US", {
+                                                            year: "numeric",
+                                                            month: "short",
+                                                            day: "numeric",
+                                                       })}
+                                                  </td>
+                                                  <td className="px-6 py-4 whitespace-nowrap">
+                                                       <div className="text-sm text-gray-900">
+                                                            {user.activity.jobs_created > 0 && (
+                                                                 <div>Jobs: {user.activity.jobs_created}</div>
+                                                            )}
+                                                            {user.activity.applications_count > 0 && (
+                                                                 <div>Apps: {user.activity.applications_count}</div>
+                                                            )}
+                                                            {user.activity.jobs_created === 0 && user.activity.applications_count === 0 && (
+                                                                 <span className="text-gray-400">No activity</span>
+                                                            )}
+                                                       </div>
+                                                  </td>
+                                                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                                       <div className="flex items-center gap-2">
+                                                            <Button variant="ghost" size="sm" className="text-indigo-600 hover:text-indigo-700">
+                                                                 View
+                                                            </Button>
+                                                            <Button variant="ghost" size="sm" className="text-gray-600 hover:text-gray-700">
+                                                                 Edit
+                                                            </Button>
+                                                            <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                                                                 {user.email_confirmed ? "Suspend" : "Activate"}
+                                                            </Button>
+                                                       </div>
+                                                  </td>
+                                             </tr>
+                                        ))
+                                   )}
                               </tbody>
                          </table>
                     </div>
@@ -227,23 +254,40 @@ export default function UsersPage() {
                     <div className="px-6 py-4 border-t border-gray-200">
                          <div className="flex items-center justify-between">
                               <div className="text-sm text-gray-700">
-                                   Showing <span className="font-medium">1</span> to <span className="font-medium">6</span> of{" "}
-                                   <span className="font-medium">2,543</span> results
+                                   Showing <span className="font-medium">{((pagination.page - 1) * pagination.limit) + 1}</span> to{" "}
+                                   <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.total)}</span> of{" "}
+                                   <span className="font-medium">{pagination.total}</span> results
                               </div>
                               <div className="flex items-center gap-2">
-                                   <Button variant="outline" size="sm" disabled>
+                                   <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={pagination.page === 1}
+                                        onClick={() => setCurrentPage(pagination.page - 1)}
+                                   >
                                         Previous
                                    </Button>
-                                   <Button variant="outline" size="sm" className="bg-indigo-600 text-white hover:bg-indigo-700">
-                                        1
-                                   </Button>
-                                   <Button variant="outline" size="sm">
-                                        2
-                                   </Button>
-                                   <Button variant="outline" size="sm">
-                                        3
-                                   </Button>
-                                   <Button variant="outline" size="sm">
+                                   {Array.from({ length: pagination.pages }, (_, i) => i + 1).map((page) => (
+                                        <Button
+                                             key={page}
+                                             variant="outline"
+                                             size="sm"
+                                             className={
+                                                  page === pagination.page
+                                                       ? "bg-indigo-600 text-white hover:bg-indigo-700"
+                                                       : ""
+                                             }
+                                             onClick={() => setCurrentPage(page)}
+                                        >
+                                             {page}
+                                        </Button>
+                                   ))}
+                                   <Button
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={pagination.page === pagination.pages}
+                                        onClick={() => setCurrentPage(pagination.page + 1)}
+                                   >
                                         Next
                                    </Button>
                               </div>
