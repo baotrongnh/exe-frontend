@@ -3,7 +3,7 @@ import { supabase } from "./supabase";
 
 // Base URL cho API backend
 export const API_BASE_URL = "https://exe201-sgk6.onrender.com"; // Backend API base URL
-const TEMP_API_URL = 'https://513q6dp9-5000.asse.devtunnels.ms'
+const TEMP_API_URL = 'https://exe201-sgk6.onrender.com'
 const CV_API_BASE_URL = "https://exe201-sgk6.onrender.com/api";
 const VIDEO_CALL_API_BASE_URL = "https://exe201-sgk6.onrender.com"; // Video Call API base URL
 
