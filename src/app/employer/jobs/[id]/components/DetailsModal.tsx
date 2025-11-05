@@ -138,7 +138,10 @@ export function DetailsModal({
                                             <Button
                                                 size="sm"
                                                 variant="outline"
-                                                onClick={() => onDownloadFile(fileUrl, fileName, deliverable.id, index)}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    onDownloadFile(fileUrl, fileName, deliverable.id, index);
+                                                }}
                                                 className="gap-2 flex-shrink-0"
                                             >
                                                 <Download className="w-4 h-4" />
