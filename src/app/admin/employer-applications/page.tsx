@@ -69,7 +69,7 @@ export default function EmployerApplicationsPage() {
                appliedDate: "Mar 8, 2024",
                description: "Online learning platform for professional development",
           },
-     ]
+     ];
 
      const filteredApplications = applications.filter(
           (app) =>
