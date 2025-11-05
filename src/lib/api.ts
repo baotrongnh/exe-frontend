@@ -398,6 +398,12 @@ export const api = {
       });
       return response.data;
     },
+
+    // Complete an application (close the job)
+    complete: async (applicationId: string) => {
+      const response = await jobProductsApiClient.post(`/api/applications/${applicationId}/complete`);
+      return response.data;
+    },
   },
 
   // CVs APIs

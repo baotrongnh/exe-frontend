@@ -10,6 +10,7 @@ import { api } from "@/lib/api"
 import { useParams } from "next/navigation"
 import { Check } from "lucide-react"
 import { EmployerProductsSection } from "./components/EmployerProductsSection"
+import { CompleteJobModal } from "./components/CompleteJobModal"
 
 // Type cho Job Detail
 interface JobDetail {
@@ -33,6 +34,18 @@ interface JobDetail {
     category_id: string | null
 }
 
+interface Application {
+    id: string
+    job_id: string
+    applicant_id: string
+    status: 'pending' | 'accepted' | 'rejected' | 'completed'
+    applicant?: {
+        id: string
+        full_name: string
+        email: string
+    }
+}
+
 interface ApiResponse {
     success: boolean
     data: JobDetail
@@ -45,6 +58,10 @@ export default function EmployerJobDetailPage() {
     const [job, setJob] = useState<JobDetail | null>(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
+    const [completingJob, setCompletingJob] = useState(false)
+    const [completeModalOpen, setCompleteModalOpen] = useState(false)
+    const [acceptedApplication, setAcceptedApplication] = useState<Application | null>(null)
+    const [loadingApplications, setLoadingApplications] = useState(false)
 
     useEffect(() => {
         const fetchData = async () => {
@@ -53,6 +70,25 @@ export default function EmployerJobDetailPage() {
                 const response: ApiResponse = await api.jobs.getById(jobId)
                 setJob(response.data)
                 setError(null)
+
+                // Fetch accepted application if job is active
+                if (response.data.status === 'active') {
+                    setLoadingApplications(true)
+                    try {
+                        const applicationsResponse = await api.applications.getJobApplications(jobId)
+                        if (applicationsResponse.success && applicationsResponse.data) {
+                            // Find the accepted application
+                            const accepted = applicationsResponse.data.find(
+                                (app: Application) => app.status === 'accepted'
+                            )
+                            setAcceptedApplication(accepted || null)
+                        }
+                    } catch (appError) {
+                        console.error('Error fetching applications:', appError)
+                    } finally {
+                        setLoadingApplications(false)
+                    }
+                }
             } catch (err: unknown) {
                 console.error('Error fetching job detail:', err)
                 const errorMessage = err instanceof Error ? err.message : 'Unable to load job details'
@@ -115,6 +151,47 @@ export default function EmployerJobDetailPage() {
     const getRandomColor = () => {
         const colors = ['bg-indigo-500', 'bg-blue-500', 'bg-teal-500', 'bg-gray-800', 'bg-cyan-500', 'bg-purple-500']
         return colors[Math.floor(Math.random() * colors.length)]
+    }
+
+    // Open Complete Job Modal
+    const openCompleteModal = () => {
+        if (!acceptedApplication) {
+            alert('No accepted application found. You must accept an application before completing the job.');
+            return;
+        }
+        setCompleteModalOpen(true);
+    };
+
+    // Handle Complete Job
+    const handleCompleteJob = async () => {
+        if (!job || !acceptedApplication) {
+            alert('Cannot complete job: No accepted application found.');
+            return;
+        }
+
+        try {
+            setCompletingJob(true);
+
+            console.log('Completing job with accepted application:', acceptedApplication.id);
+
+            // Use the accepted application ID (required by backend)
+            await api.applications.complete(acceptedApplication.id);
+
+            alert('Job has been completed successfully! Payment has been transferred to the freelancer (minus 8% platform fee).');
+
+            // Update local state
+            setJob(prev => prev ? { ...prev, status: 'completed' } : null);
+
+            // Close modal
+            setCompleteModalOpen(false);
+
+        } catch (error) {
+            console.error('Error completing job:', error);
+            const errorMessage = error instanceof Error ? error.message : 'Failed to complete job';
+            alert(`Failed to complete job: ${errorMessage}`);
+        } finally {
+            setCompletingJob(false);
+        }
     }
 
     if (loading) {
@@ -438,14 +515,42 @@ export default function EmployerJobDetailPage() {
                                         View All Applications
                                     </Button>
                                 </Link>
-                                <Button variant="outline" className="w-full h-12 text-base border-gray-300 hover:bg-gray-50">
-                                    Edit Job
+                                <Button
+                                    onClick={openCompleteModal}
+                                    disabled={job.status === 'closed' || job.status === 'completed' || !acceptedApplication || loadingApplications}
+                                    className="w-full h-12 text-base bg-green-600 text-white hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+                                >
+                                    {loadingApplications ? (
+                                        <>
+                                            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                            Loading...
+                                        </>
+                                    ) : job.status === 'closed' || job.status === 'completed' ? (
+                                        'Job Completed'
+                                    ) : !acceptedApplication ? (
+                                        'No Accepted Application'
+                                    ) : (
+                                        <>
+                                            <Check className="w-4 h-4 mr-2" />
+                                            Mark as Done
+                                        </>
+                                    )}
                                 </Button>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {/* Complete Job Modal */}
+            <CompleteJobModal
+                isOpen={completeModalOpen}
+                onClose={() => setCompleteModalOpen(false)}
+                job={job}
+                acceptedApplication={acceptedApplication}
+                onConfirm={handleCompleteJob}
+                isLoading={completingJob}
+            />
         </div>
     )
 }

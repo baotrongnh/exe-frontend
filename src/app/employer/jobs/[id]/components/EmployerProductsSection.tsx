@@ -16,8 +16,6 @@ import {
 import { RejectModal } from "./RejectModal"
 import { DetailsModal } from "./DetailsModal"
 
-const TEMP_API_URL = 'https://513q6dp9-5000.asse.devtunnels.ms'
-
 interface ProductFile {
     name: string
     path: string
@@ -201,18 +199,24 @@ export function EmployerProductsSection({ jobId }: EmployerProductsSectionProps)
             console.log("File Name:", fileName)
             toast.showToast("Preparing download...", "info")
 
-            const downloadUrl = `${TEMP_API_URL}/api/job-products/${productId}/files/${fileIndex}`
-            console.log("Fetching from backend:", downloadUrl)
+            // Get backend download URL
+            const backendUrl = await api.jobProducts.downloadFile(productId, fileIndex)
+            console.log("Backend download URL:", backendUrl)
 
-            const response = await api.jobProducts.downloadFile(productId, fileIndex)
+            // Fetch file with authentication
+            const { supabase } = await import('@/lib/supabase')
+            const { data: { session } } = await supabase.auth.getSession()
 
-            const finalUrl = typeof response === 'string' ? response : downloadUrl
-            console.log("Fetching file from:", finalUrl)
-
-            const fileResponse = await fetch(finalUrl)
+            const fileResponse = await fetch(backendUrl, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${session?.access_token}`
+                }
+            })
 
             if (!fileResponse.ok) {
-                throw new Error(`HTTP error! status: ${fileResponse.status}`)
+                const errorData = await fileResponse.json().catch(() => ({}))
+                throw new Error(errorData.message || `HTTP error! status: ${fileResponse.status}`)
             }
 
             console.log("Creating blob...")
@@ -237,7 +241,8 @@ export function EmployerProductsSection({ jobId }: EmployerProductsSectionProps)
             console.log("=== DOWNLOAD SUCCESS ===")
         } catch (error) {
             console.error("=== DOWNLOAD ERROR ===", error)
-            toast.showToast("Download failed. Opening file in new tab.", "warning")
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+            toast.showToast(`Download failed: ${errorMessage}. Opening file in new tab.`, "warning")
             window.open(fileUrl, '_blank')
         }
     }
