@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/AuthContext";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/toast";
-import { supabase } from "@/lib/supabase";
 import {
   Users,
   Clock,
@@ -89,7 +88,7 @@ export default function EmployerApplicationsPage() {
         } else {
           alert("Failed to fetch profile");
         }
-      } catch (error) {
+      } catch {
         alert("Failed to fetch profile");
       }
     };
@@ -126,14 +125,14 @@ export default function EmployerApplicationsPage() {
                 }));
                 allApplications.push(...appsWithJob);
               }
-            } catch (error) {
+            } catch {
               // Continue fetching other applications
             }
           }
 
           setApplications(allApplications);
         }
-      } catch (error) {
+      } catch {
         alert("Failed to load applications");
       } finally {
         setLoading(false);
@@ -169,7 +168,7 @@ export default function EmployerApplicationsPage() {
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-    } catch (error) {
+    } catch {
       alert("Failed to download CV");
     }
   };
@@ -179,28 +178,7 @@ export default function EmployerApplicationsPage() {
     try {
       setActionLoading(`accept-${applicationId}`);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(`https://exe201-sgk6.onrender.com/api/applications/${applicationId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          status: 'accepted',
-          employer_notes: 'Application accepted'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to accept application');
-      }
+      await api.applications.accept(applicationId, 'Application accepted');
 
       toast.showToast("Application accepted successfully!", "success");
 
@@ -237,28 +215,7 @@ export default function EmployerApplicationsPage() {
     try {
       setActionLoading(`reject-${applicationId}`);
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      if (!token) {
-        throw new Error('No authentication token found');
-      }
-
-      const response = await fetch(`https://exe201-sgk6.onrender.com/api/applications/${applicationId}/status`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          status: 'rejected',
-          employer_notes: 'Application rejected'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to reject application');
-      }
+      await api.applications.reject(applicationId, 'Application rejected');
 
       toast.showToast("Application rejected.", "success");
 
@@ -300,11 +257,11 @@ export default function EmployerApplicationsPage() {
         jobId: jobId
       };
 
-      const response = await api.conversations.create(payload);
+      await api.conversations.create(payload);
 
       alert("Interview scheduled! A conversation has been created.");
 
-    } catch (error) {
+    } catch {
       alert("Failed to schedule interview. Please try again.");
     } finally {
       setActionLoading(null);

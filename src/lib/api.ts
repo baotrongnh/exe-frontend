@@ -399,6 +399,30 @@ export const api = {
       return response.data;
     },
 
+    // Accept an application (employer only)
+    accept: async (applicationId: string, employerNotes?: string) => {
+      const response = await jobProductsApiClient.put(
+        `/api/applications/${applicationId}/status`,
+        {
+          status: "accepted",
+          employer_notes: employerNotes || "Application accepted",
+        }
+      );
+      return response.data;
+    },
+
+    // Reject an application (employer only)
+    reject: async (applicationId: string, employerNotes?: string) => {
+      const response = await jobProductsApiClient.put(
+        `/api/applications/${applicationId}/status`,
+        {
+          status: "rejected",
+          employer_notes: employerNotes || "Application rejected",
+        }
+      );
+      return response.data;
+    },
+
     // Complete an application (close the job)
     complete: async (applicationId: string) => {
       const response = await jobProductsApiClient.post(`/api/applications/${applicationId}/complete`);
