@@ -445,6 +445,24 @@ export default function EmployerApplicationsPage() {
                 <Loader2 className="w-12 h-12 text-indigo-600 animate-spin mx-auto" />
                 <p className="text-gray-600 mt-6 text-lg font-medium">Loading applications...</p>
               </div>
+            ) : filteredApplications.length === 0 ? (
+              <div className="p-16 text-center">
+                <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <FileText className="w-12 h-12 text-gray-400" />
+                </div>
+                <h3 className="text-xl font-semibold text-gray-900 mb-2">No applications found</h3>
+                <p className="text-gray-600 mb-6">There are no applications matching your criteria</p>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setSearchQuery("");
+                    setSelectedTab("all");
+                  }}
+                  className="bg-white hover:bg-gray-50"
+                >
+                  Clear filters
+                </Button>
+              </div>
             ) : (
               filteredApplications.map((application) => (
                 <div key={application.id} className="p-6 hover:bg-gradient-to-r hover:from-indigo-50/30 hover:to-transparent transition-all duration-200 group">
@@ -511,76 +529,39 @@ export default function EmployerApplicationsPage() {
                         </div>
                       </div>
                     </div>
-
-                  <div className="flex flex-col items-end gap-2">
-                    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(application.status)}`}>{application.status}</span>
-                    {application.status === "pending" && (
-                      <div className="flex flex-col gap-2 mt-2">
-                        <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-32">
-                          Shortlist
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="bg-transparent w-32"
-                          onClick={() => handleScheduleInterview(
-                            application.id,
-                            application.applicant_id,
-                            application.job_id
-                          )}
-                          disabled={actionLoading === `interview-${application.id}`}
-                        >
-                          {actionLoading === `interview-${application.id}` ? "Creating..." : "Schedule Interview"}
-                        </Button>
-                        <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent w-32">
-                          Reject
-                        </Button>
-                      </div>
-                    )}
-                    {application.status === "shortlisted" && (
-                      <Button
-                        size="sm"
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white w-32 mt-2"
-                        onClick={() => handleScheduleInterview(
-                          application.id,
-                          application.applicant_id,
-                          application.job_id
-                        )}
-                        disabled={actionLoading === `interview-${application.id}`}
-                      >
-                        {actionLoading === `interview-${application.id}` ? "Creating..." : "Schedule Interview"}
-                      </Button>
-                    )}
-                    {application.status === "interviewing" && (
-                      <Button size="sm" className="bg-purple-600 hover:bg-purple-700 text-white w-32 mt-2">
-                        Make Offer
-                      </Button>
-                    )}
+                    <div className="flex flex-col items-end gap-2">
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(application.status)}`}>
+                        {application.status}
+                      </span>
+                      {application.status === "pending" && (
+                        <div className="flex flex-col gap-2 mt-2">
+                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-32">
+                            Shortlist
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="bg-transparent w-32"
+                            onClick={() => handleScheduleInterview(
+                              application.id,
+                              application.applicant_id,
+                              application.job_id
+                            )}
+                            disabled={actionLoading === `interview-${application.id}`}
+                          >
+                            {actionLoading === `interview-${application.id}` ? "Creating..." : "Schedule Interview"}
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent w-32">
+                            Reject
+                          </Button>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))
             )}
           </div>
-
-          {!loading && filteredApplications.length === 0 && (
-            <div className="p-16 text-center">
-              <div className="w-24 h-24 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <FileText className="w-12 h-12 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No applications found</h3>
-              <p className="text-gray-600 mb-6">There are no applications matching your criteria</p>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setSearchQuery("");
-                  setSelectedTab("all");
-                }}
-                className="bg-white hover:bg-gray-50"
-              >
-                Clear filters
-              </Button>
-            </div>
-          )}
         </div>
       </div>
     </div>

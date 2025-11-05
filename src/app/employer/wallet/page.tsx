@@ -234,68 +234,7 @@ export default function WalletPage() {
                               </CardContent>
                          </Card>
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-900 mb-2">No transactions found</h3>
-                    <p className="text-gray-600">
-                      Transactions will appear here after you make deposits or payments
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {Array.isArray(transactions) &&
-                      transactions.map((transaction) => (
-                        <div
-                          key={transaction.id}
-                          className="flex items-center justify-between p-4 rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-gradient-to-r hover:from-indigo-50/30 hover:to-transparent transition-all duration-200"
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className="p-3 rounded-xl bg-gradient-to-br from-gray-50 to-gray-100 shadow-sm">
-                              {getTransactionIcon(transaction.transaction_type)}
-                            </div>
-                            <div>
-                              <p className="font-semibold capitalize text-gray-900">
-                                {transaction.transaction_type}
-                              </p>
-                              {transaction.description && (
-                                <p className="text-sm text-gray-600">
-                                  {transaction.description}
-                                </p>
-                              )}
-                              <p className="text-xs text-gray-500">
-                                {new Date(transaction.created_at).toLocaleString(
-                                  "vi-VN"
-                                )}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="text-right space-y-1">
-                            <p
-                              className={`font-bold text-lg ${transaction.transaction_type?.toUpperCase() ===
-                                  "DEPOSIT" ||
-                                  transaction.transaction_type?.toUpperCase() ===
-                                  "REFUND"
-                                  ? "text-green-600"
-                                  : "text-red-600"
-                                }`}
-                            >
-                              {transaction.transaction_type?.toUpperCase() ===
-                                "DEPOSIT" ||
-                                transaction.transaction_type?.toUpperCase() ===
-                                "REFUND"
-                                ? "+"
-                                : "-"}
-                              {formatCurrency(transaction.amount)}
-                            </p>
-                            {getStatusBadge(transaction.status)}
-                          </div>
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+               </div>
           </div>
-        </div>
-      </div>
-    </div>
-  );
+     );
 }
