@@ -17,7 +17,7 @@ import type {
 } from "@/types/admin";
 
 // Base URL cho Admin Dashboard API - sử dụng localhost để test
-const ADMIN_API_BASE_URL = "http://14.169.15.9:3003/api";
+const ADMIN_API_BASE_URL = "https://exe201-sgk6.onrender.com/api";
 
 // Tạo axios instance cho Admin API
 const adminApiClient = axios.create({

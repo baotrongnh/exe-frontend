@@ -2,10 +2,10 @@ import axios, { AxiosError } from "axios";
 import { supabase } from "./supabase";
 
 // Base URL cho API backend
-export const API_BASE_URL = "http://14.169.52.232:3003"; // Backend API base URL
+export const API_BASE_URL = "https://exe201-sgk6.onrender.com"; // Backend API base URL
 const TEMP_API_URL = 'https://513q6dp9-5000.asse.devtunnels.ms'
-const CV_API_BASE_URL = "http://14.169.15.9:3003/api";
-const VIDEO_CALL_API_BASE_URL = "http://14.169.15.9:3003"; // Video Call API base URL
+const CV_API_BASE_URL = "https://exe201-sgk6.onrender.com/api";
+const VIDEO_CALL_API_BASE_URL = "https://exe201-sgk6.onrender.com"; // Video Call API base URL
 
 // Tạo axios instance cho general API
 const apiClient = axios.create({
