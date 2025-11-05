@@ -311,6 +311,11 @@ export default function EmployerApplicationsPage() {
     }
   };
 
+  // Check if a job has an accepted application
+  const jobHasAcceptedApplication = (jobId: string) => {
+    return applications.some((app) => app.job_id === jobId && app.status === "accepted");
+  };
+
   const filteredApplications = applications.filter((app) => {
     const matchesSearch = (app.user?.full_name || "").toLowerCase().includes(searchQuery.toLowerCase()) || (app.job?.title || "").toLowerCase().includes(searchQuery.toLowerCase());
     const matchesTab = selectedTab === "all" || app.status === selectedTab;
@@ -533,10 +538,25 @@ export default function EmployerApplicationsPage() {
                       <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium capitalize ${getStatusColor(application.status)}`}>
                         {application.status}
                       </span>
-                      {application.status === "pending" && (
+                      {application.status === "pending" && !jobHasAcceptedApplication(application.job_id) && (
                         <div className="flex flex-col gap-2 mt-2">
-                          <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-32">
-                            Shortlist
+                          <Button
+                            size="sm"
+                            className="bg-green-600 hover:bg-green-700 text-white w-32"
+                            onClick={() => handleAccept(application.id)}
+                            disabled={actionLoading === `accept-${application.id}`}
+                          >
+                            {actionLoading === `accept-${application.id}` ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                Accepting...
+                              </>
+                            ) : (
+                              <>
+                                <Check className="w-4 h-4 mr-1" />
+                                Accept
+                              </>
+                            )}
                           </Button>
                           <Button
                             size="sm"
@@ -551,9 +571,32 @@ export default function EmployerApplicationsPage() {
                           >
                             {actionLoading === `interview-${application.id}` ? "Creating..." : "Schedule Interview"}
                           </Button>
-                          <Button size="sm" variant="outline" className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent w-32">
-                            Reject
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="text-red-600 hover:text-red-700 hover:bg-red-50 bg-transparent w-32"
+                            onClick={() => handleReject(application.id)}
+                            disabled={actionLoading === `reject-${application.id}`}
+                          >
+                            {actionLoading === `reject-${application.id}` ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                                Rejecting...
+                              </>
+                            ) : (
+                              <>
+                                <X className="w-4 h-4 mr-1" />
+                                Reject
+                              </>
+                            )}
                           </Button>
+                        </div>
+                      )}
+                      {application.status === "pending" && jobHasAcceptedApplication(application.job_id) && (
+                        <div className="mt-2 bg-yellow-50 border border-yellow-200 rounded-lg p-3 text-center">
+                          <p className="text-xs text-yellow-800 font-medium">
+                            Another candidate has been accepted for this position
+                          </p>
                         </div>
                       )}
                     </div>
