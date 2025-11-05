@@ -120,3 +120,8 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Video call styles */
+.mirror {
+  transform: scaleX(-1);
+}

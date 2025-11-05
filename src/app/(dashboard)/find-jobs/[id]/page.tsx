@@ -1,6 +1,6 @@
 "use client"
 
-import { ArrowLeft, Bell, Share2, Check, Briefcase, DollarSign, Calendar, Clock, MapPin } from "lucide-react"
+import { ArrowLeft, Bell, Share2, Check, Briefcase, DollarSign, Calendar, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
@@ -9,6 +9,7 @@ import { useEffect, useState } from "react"
 import { api } from "@/lib/api"
 import { useParams, useRouter } from "next/navigation"
 import { useToast } from "@/components/toast"
+import { ProductUploadSection } from "./components/ProductUploadSection"
 
 // Type cho Job Detail
 interface JobDetail {
@@ -50,22 +51,38 @@ export default function JobDetailPage() {
      const [applied, setApplied] = useState(false)
 
      useEffect(() => {
-          const fetchJobDetail = async () => {
+          const fetchData = async () => {
                try {
                     setLoading(true)
                     const response: ApiResponse = await api.jobs.getById(jobId)
                     setJob(response.data)
+
+                    // Check if user has already applied to this job
+                    try {
+                         const applicationsResponse = await api.applications.getAll()
+                         if (applicationsResponse.success && applicationsResponse.data) {
+                              const hasApplied = applicationsResponse.data.some(
+                                   (app: { job_id: string }) => app.job_id === jobId
+                              )
+                              setApplied(hasApplied)
+                         }
+                    } catch (appErr) {
+                         console.error('Error checking application status:', appErr)
+                         // Continue even if check fails
+                    }
+
                     setError(null)
-               } catch (err: any) {
+               } catch (err: unknown) {
                     console.error('Error fetching job detail:', err)
-                    setError(err.message || 'Không thể tải chi tiết công việc')
+                    const errorMessage = err instanceof Error ? err.message : 'Không thể tải chi tiết công việc'
+                    setError(errorMessage)
                } finally {
                     setLoading(false)
                }
           }
 
           if (jobId) {
-               fetchJobDetail()
+               fetchData()
           }
      }, [jobId])
 
@@ -82,9 +99,9 @@ export default function JobDetailPage() {
                     const jobResponse: ApiResponse = await api.jobs.getById(jobId)
                     setJob(jobResponse.data)
                }
-          } catch (err: any) {
+          } catch (err: unknown) {
                console.error('Error applying job:', err)
-               const errorMessage = err.response?.data?.message || 'Có lỗi xảy ra khi apply job'
+               const errorMessage = (err as { response?: { data?: { message?: string } } }).response?.data?.message || 'Có lỗi xảy ra khi apply job'
 
                // Kiểm tra nếu cần upload CV
                if (errorMessage === 'You must upload at least one active CV before applying for jobs') {
@@ -170,7 +187,7 @@ export default function JobDetailPage() {
                <header className="bg-card border-b border-border px-8 py-4">
                     <div className="flex items-center justify-between">
                          <div className="flex items-center gap-4">
-                              <Link href="/dashboard/find-jobs">
+                              <Link href="/find-jobs">
                                    <Button variant="ghost" size="icon">
                                         <ArrowLeft className="w-5 h-5" />
                                    </Button>
@@ -230,13 +247,23 @@ export default function JobDetailPage() {
                                                   <Button variant="outline" size="icon">
                                                        <Share2 className="w-5 h-5" />
                                                   </Button>
-                                                  <Button
-                                                       className={applied ? "bg-green-600 hover:bg-green-700 text-white px-8" : "bg-primary text-primary-foreground hover:bg-primary/90 px-8"}
-                                                       onClick={handleApply}
-                                                       disabled={applying || applied}
-                                                  >
-                                                       {applying ? 'Applying...' : applied ? 'Applied' : 'Apply'}
-                                                  </Button>
+                                                  {applied ? (
+                                                       <Button
+                                                            className="bg-green-600 hover:bg-green-700 text-white px-8 cursor-default"
+                                                            disabled
+                                                       >
+                                                            <Check className="w-5 h-5 mr-2" />
+                                                            Applied
+                                                       </Button>
+                                                  ) : (
+                                                       <Button
+                                                            className="bg-primary text-primary-foreground hover:bg-primary/90 px-8"
+                                                            onClick={handleApply}
+                                                            disabled={applying}
+                                                       >
+                                                            {applying ? 'Applying...' : 'Apply'}
+                                                       </Button>
+                                                  )}
                                              </div>
                                         </div>
                                    </Card>
@@ -309,124 +336,144 @@ export default function JobDetailPage() {
                                              </div>
                                         </div>
                                    </Card>
+
+                                   {/* Product Upload Section - Only shown if user has applied */}
+                                   {applied && (
+                                        <div>
+                                             <h3 className="text-xl font-bold text-foreground mb-4">Products Uploaded</h3>
+                                             <ProductUploadSection jobId={jobId} />
+                                        </div>
+                                   )}
                               </div>
 
                               {/* Right Column - Sidebar */}
                               <div className="space-y-6">
-                                   {/* About this role */}
-                                   <Card className="p-6">
-                                        <h3 className="text-lg font-bold text-foreground mb-4">About this role</h3>
-                                        <div className="space-y-4">
-                                             <div>
-                                                  <div className="flex items-center justify-between mb-2">
-                                                       <span className="text-sm text-muted-foreground">
-                                                            <span className="font-semibold text-foreground">{job.applications_count}</span> applied
+                                   <div className="sticky top-3 space-y-3">
+                                        {/* About this role */}
+                                        <Card className="p-6">
+                                             <h3 className="text-lg font-bold text-foreground mb-4">About this role</h3>
+                                             <div className="space-y-4">
+                                                  <div>
+                                                       <div className="flex items-center justify-between mb-2">
+                                                            <span className="text-sm text-muted-foreground">
+                                                                 <span className="font-semibold text-foreground">{job.applications_count}</span> applied
+                                                            </span>
+                                                       </div>
+                                                  </div>
+                                                  <div className="space-y-3 pt-2 border-t">
+                                                       {job.deadline && (
+                                                            <div className="flex justify-between items-start">
+                                                                 <span className="text-sm text-muted-foreground">Deadline</span>
+                                                                 <span className="text-sm font-semibold text-foreground text-right">
+                                                                      {new Date(job.deadline).toLocaleDateString('vi-VN', {
+                                                                           day: '2-digit',
+                                                                           month: 'long',
+                                                                           year: 'numeric'
+                                                                      })}
+                                                                 </span>
+                                                            </div>
+                                                       )}
+                                                       {job.createdAt && (
+                                                            <div className="flex justify-between items-start">
+                                                                 <span className="text-sm text-muted-foreground">Posted On</span>
+                                                                 <span className="text-sm font-semibold text-foreground text-right">
+                                                                      {new Date(job.createdAt).toLocaleDateString('vi-VN', {
+                                                                           day: '2-digit',
+                                                                           month: 'long',
+                                                                           year: 'numeric'
+                                                                      })}
+                                                                 </span>
+                                                            </div>
+                                                       )}
+                                                       {job.updatedAt && (
+                                                            <div className="flex justify-between items-start">
+                                                                 <span className="text-sm text-muted-foreground">Last Updated</span>
+                                                                 <span className="text-sm font-semibold text-foreground text-right">
+                                                                      {new Date(job.updatedAt).toLocaleDateString('vi-VN', {
+                                                                           day: '2-digit',
+                                                                           month: 'long',
+                                                                           year: 'numeric'
+                                                                      })}
+                                                                 </span>
+                                                            </div>
+                                                       )}
+                                                       <div className="flex justify-between items-start">
+                                                            <span className="text-sm text-muted-foreground">Job Type</span>
+                                                            <span className="text-sm font-semibold text-foreground">{job.job_type.replace('_', ' ')}</span>
+                                                       </div>
+                                                       <div className="flex justify-between items-start">
+                                                            <span className="text-sm text-muted-foreground">Salary</span>
+                                                            <span className="text-sm font-semibold text-foreground text-right">{formatBudget(job)}</span>
+                                                       </div>
+                                                  </div>
+                                             </div>
+                                        </Card>
+
+                                        {/* Budget Details */}
+                                        <Card className="p-6">
+                                             <h3 className="text-lg font-bold text-foreground mb-4">Budget Range</h3>
+                                             <div className="space-y-3">
+                                                  <div className="flex justify-between">
+                                                       <span className="text-sm text-muted-foreground">Minimum</span>
+                                                       <span className="text-sm font-semibold text-foreground">
+                                                            {job.currency === 'VND'
+                                                                 ? `${(parseFloat(job.budget_min) / 1000000).toFixed(1)}tr VNĐ`
+                                                                 : `$${parseFloat(job.budget_min)}`
+                                                            }
+                                                       </span>
+                                                  </div>
+                                                  <div className="flex justify-between">
+                                                       <span className="text-sm text-muted-foreground">Maximum</span>
+                                                       <span className="text-sm font-semibold text-foreground">
+                                                            {job.currency === 'VND'
+                                                                 ? `${(parseFloat(job.budget_max) / 1000000).toFixed(1)}tr VNĐ`
+                                                                 : `$${parseFloat(job.budget_max)}`
+                                                            }
+                                                       </span>
+                                                  </div>
+                                                  <div className="flex justify-between pt-3 border-t">
+                                                       <span className="text-sm text-muted-foreground">Budget Type</span>
+                                                       <span className="text-sm font-semibold text-foreground">
+                                                            {job.budget_type === 'HOURLY' ? 'Per Hour' : 'Fixed Price'}
                                                        </span>
                                                   </div>
                                              </div>
-                                             <div className="space-y-3 pt-2 border-t">
-                                                  {job.deadline && (
-                                                       <div className="flex justify-between items-start">
-                                                            <span className="text-sm text-muted-foreground">Deadline</span>
-                                                            <span className="text-sm font-semibold text-foreground text-right">
-                                                                 {new Date(job.deadline).toLocaleDateString('vi-VN', {
-                                                                      day: '2-digit',
-                                                                      month: 'long',
-                                                                      year: 'numeric'
-                                                                 })}
-                                                            </span>
-                                                       </div>
-                                                  )}
-                                                  {job.createdAt && (
-                                                       <div className="flex justify-between items-start">
-                                                            <span className="text-sm text-muted-foreground">Posted On</span>
-                                                            <span className="text-sm font-semibold text-foreground text-right">
-                                                                 {new Date(job.createdAt).toLocaleDateString('vi-VN', {
-                                                                      day: '2-digit',
-                                                                      month: 'long',
-                                                                      year: 'numeric'
-                                                                 })}
-                                                            </span>
-                                                       </div>
-                                                  )}
-                                                  {job.updatedAt && (
-                                                       <div className="flex justify-between items-start">
-                                                            <span className="text-sm text-muted-foreground">Last Updated</span>
-                                                            <span className="text-sm font-semibold text-foreground text-right">
-                                                                 {new Date(job.updatedAt).toLocaleDateString('vi-VN', {
-                                                                      day: '2-digit',
-                                                                      month: 'long',
-                                                                      year: 'numeric'
-                                                                 })}
-                                                            </span>
-                                                       </div>
-                                                  )}
-                                                  <div className="flex justify-between items-start">
-                                                       <span className="text-sm text-muted-foreground">Job Type</span>
-                                                       <span className="text-sm font-semibold text-foreground">{job.job_type.replace('_', ' ')}</span>
-                                                  </div>
-                                                  <div className="flex justify-between items-start">
-                                                       <span className="text-sm text-muted-foreground">Salary</span>
-                                                       <span className="text-sm font-semibold text-foreground text-right">{formatBudget(job)}</span>
-                                                  </div>
-                                             </div>
-                                        </div>
-                                   </Card>
-
-                                   {/* Budget Details */}
-                                   <Card className="p-6">
-                                        <h3 className="text-lg font-bold text-foreground mb-4">Budget Range</h3>
-                                        <div className="space-y-3">
-                                             <div className="flex justify-between">
-                                                  <span className="text-sm text-muted-foreground">Minimum</span>
-                                                  <span className="text-sm font-semibold text-foreground">
-                                                       {job.currency === 'VND'
-                                                            ? `${(parseFloat(job.budget_min) / 1000000).toFixed(1)}tr VNĐ`
-                                                            : `$${parseFloat(job.budget_min)}`
-                                                       }
-                                                  </span>
-                                             </div>
-                                             <div className="flex justify-between">
-                                                  <span className="text-sm text-muted-foreground">Maximum</span>
-                                                  <span className="text-sm font-semibold text-foreground">
-                                                       {job.currency === 'VND'
-                                                            ? `${(parseFloat(job.budget_max) / 1000000).toFixed(1)}tr VNĐ`
-                                                            : `$${parseFloat(job.budget_max)}`
-                                                       }
-                                                  </span>
-                                             </div>
-                                             <div className="flex justify-between pt-3 border-t">
-                                                  <span className="text-sm text-muted-foreground">Budget Type</span>
-                                                  <span className="text-sm font-semibold text-foreground">
-                                                       {job.budget_type === 'HOURLY' ? 'Per Hour' : 'Fixed Price'}
-                                                  </span>
-                                             </div>
-                                        </div>
-                                   </Card>
-
-                                   {/* Required Skills */}
-                                   {job.skills_required && job.skills_required.length > 0 && (
-                                        <Card className="p-6">
-                                             <h3 className="text-lg font-bold text-foreground mb-4">Skills Required</h3>
-                                             <div className="flex flex-wrap gap-2">
-                                                  {job.skills_required.map((skill, index) => (
-                                                       <Badge key={index} variant="outline" className="text-primary border-primary">
-                                                            {skill}
-                                                       </Badge>
-                                                  ))}
-                                             </div>
                                         </Card>
-                                   )}
 
-                                   {/* Apply Button - Sticky */}
-                                   <div className="sticky bottom-6">
-                                        <Button
-                                             className={applied ? "w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base" : "w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base"}
-                                             onClick={handleApply}
-                                             disabled={applying || applied}
-                                        >
-                                             {applying ? 'Applying...' : applied ? 'Applied' : 'Apply Now'}
-                                        </Button>
+                                        {/* Required Skills */}
+                                        {job.skills_required && job.skills_required.length > 0 && (
+                                             <Card className="p-6">
+                                                  <h3 className="text-lg font-bold text-foreground mb-4">Skills Required</h3>
+                                                  <div className="flex flex-wrap gap-2">
+                                                       {job.skills_required.map((skill, index) => (
+                                                            <Badge key={index} variant="outline" className="text-primary border-primary">
+                                                                 {skill}
+                                                            </Badge>
+                                                       ))}
+                                                  </div>
+                                             </Card>
+                                        )}
+
+                                        {/* Apply Button */}
+                                        <div>
+                                             {applied ? (
+                                                  <Button
+                                                       className="w-full bg-green-600 hover:bg-green-700 text-white h-12 text-base cursor-default"
+                                                       disabled
+                                                  >
+                                                       <Check className="w-5 h-5 mr-2" />
+                                                       Applied
+                                                  </Button>
+                                             ) : (
+                                                  <Button
+                                                       className="w-full bg-primary text-primary-foreground hover:bg-primary/90 h-12 text-base"
+                                                       onClick={handleApply}
+                                                       disabled={applying}
+                                                  >
+                                                       {applying ? 'Applying...' : 'Apply Now'}
+                                                  </Button>
+                                             )}
+                                        </div>
                                    </div>
                               </div>
                          </div>

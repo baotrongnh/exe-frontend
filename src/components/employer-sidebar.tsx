@@ -1,15 +1,54 @@
 "use client"
 
 import Link from "next/link"
+import Image from "next/image"
 import { usePathname, useRouter } from "next/navigation"
 import { useEffect, useState } from "react"
 import { cn } from "@/lib/utils"
 import { api } from "@/lib/api"
+import { useAuth } from "@/contexts/AuthContext"
+import { Loader2 } from "lucide-react"
+
+interface EmployerProfile {
+     id: string
+     user_id: string
+     company_name: string
+     company_website: string | null
+     company_logo: string | null
+     company_description: string | null
+     industry: string | null
+     company_size: string | null
+     is_verified: boolean
+     created_at: string
+     updated_at: string
+}
 
 export function EmployerSidebar() {
      const pathname = usePathname()
      const router = useRouter()
+     const { user, signOut } = useAuth()
      const [unreadCount, setUnreadCount] = useState(0)
+     const [profile, setProfile] = useState<EmployerProfile | null>(null)
+     const [loadingProfile, setLoadingProfile] = useState(true)
+
+     // Fetch employer profile
+     useEffect(() => {
+          const fetchProfile = async () => {
+               if (!user) return
+
+               try {
+                    setLoadingProfile(true)
+                    const data = await api.employer.getProfile()
+                    setProfile(data)
+               } catch (error) {
+                    console.error("Error fetching employer profile:", error)
+               } finally {
+                    setLoadingProfile(false)
+               }
+          }
+
+          fetchProfile()
+     }, [user])
 
      // Fetch unread message count
      useEffect(() => {
@@ -33,9 +72,22 @@ export function EmployerSidebar() {
           return () => clearInterval(interval)
      }, [])
 
-     const handleLogout = () => {
-          localStorage.removeItem("employerAuth")
-          router.push("/employer/login")
+     const handleSignOut = async () => {
+          try {
+               await signOut()
+               router.push("/login")
+          } catch (error) {
+               console.error("Error signing out:", error)
+          }
+     }
+
+     const getInitials = (name: string) => {
+          return name
+               .split(" ")
+               .map((n) => n[0])
+               .join("")
+               .toUpperCase()
+               .slice(0, 2)
      }
 
      const navItems: Array<{
@@ -97,6 +149,20 @@ export function EmployerSidebar() {
                                    strokeLinejoin="round"
                                    strokeWidth={2}
                                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
+                              />
+                         </svg>
+                    ),
+               },
+               {
+                    title: "Deliverables",
+                    href: "/employer/deliverables",
+                    icon: (
+                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path
+                                   strokeLinecap="round"
+                                   strokeLinejoin="round"
+                                   strokeWidth={2}
+                                   d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
                               />
                          </svg>
                     ),
@@ -176,30 +242,74 @@ export function EmployerSidebar() {
                </nav>
 
                {/* Company Profile */}
-               <div className="p-4 border-t border-gray-200">
-                    <div className="flex items-center gap-3 mb-3">
-                         <div className="w-10 h-10 bg-indigo-100 rounded-full flex items-center justify-center">
-                              <span className="text-indigo-600 font-semibold text-sm">TC</span>
+               <div className="p-4 border-t border-gray-200 bg-gradient-to-br from-gray-50 to-white">
+                    {loadingProfile ? (
+                         <div className="flex items-center justify-center py-4">
+                              <Loader2 className="w-5 h-5 animate-spin text-indigo-600" />
                          </div>
-                         <div className="flex-1 min-w-0">
-                              <div className="text-sm font-medium text-gray-900 truncate">TechCorp Inc.</div>
-                              <div className="text-xs text-gray-500 truncate">employer@techcorp.com</div>
+                    ) : profile ? (
+                         <>
+                              <div className="flex items-center gap-3 mb-3">
+                                   {profile.company_logo ? (
+                                        <div className="relative w-10 h-10 rounded-full overflow-hidden border-2 border-indigo-100">
+                                             <Image
+                                                  src={profile.company_logo}
+                                                  alt={profile.company_name}
+                                                  fill
+                                                  className="object-cover"
+                                                  onError={(e) => {
+                                                       const target = e.target as HTMLImageElement
+                                                       target.style.display = "none"
+                                                  }}
+                                             />
+                                        </div>
+                                   ) : (
+                                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-full flex items-center justify-center shadow-md">
+                                             <span className="text-white font-bold text-sm">{getInitials(profile.company_name)}</span>
+                                        </div>
+                                   )}
+                                   <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                             <div className="text-sm font-semibold text-gray-900 truncate">{profile.company_name}</div>
+                                             {profile.is_verified && (
+                                                  <svg className="w-4 h-4 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                                                       <path
+                                                            fillRule="evenodd"
+                                                            d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                                            clipRule="evenodd"
+                                                       />
+                                                  </svg>
+                                             )}
+                                        </div>
+                                        <div className="text-xs text-gray-500 truncate">{user?.email}</div>
+                                   </div>
+                              </div>
+                              <button
+                                   onClick={handleSignOut}
+                                   className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800 rounded-lg transition-all shadow-md hover:shadow-lg"
+                              >
+                                   <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path
+                                             strokeLinecap="round"
+                                             strokeLinejoin="round"
+                                             strokeWidth={2}
+                                             d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                                        />
+                                   </svg>
+                                   Sign Out
+                              </button>
+                         </>
+                    ) : (
+                         <div className="flex items-center gap-3 mb-3">
+                              <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
+                                   <span className="text-gray-500 font-semibold text-sm">?</span>
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                   <div className="text-sm font-medium text-gray-900 truncate">Loading...</div>
+                                   <div className="text-xs text-gray-500 truncate">{user?.email}</div>
+                              </div>
                          </div>
-                    </div>
-                    <button
-                         onClick={handleLogout}
-                         className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                    >
-                         <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path
-                                   strokeLinecap="round"
-                                   strokeLinejoin="round"
-                                   strokeWidth={2}
-                                   d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
-                              />
-                         </svg>
-                         Logout
-                    </button>
+                    )}
                </div>
           </div>
      )

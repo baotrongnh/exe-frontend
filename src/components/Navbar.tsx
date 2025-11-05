@@ -17,6 +17,9 @@ export default function Navbar() {
   const handleBecomeEmployer = () => {
     router.push("/employer/register");
   };
+  const handleDashboard = () => {
+    router.push("/messages");
+  };
 
   const handleEmployerDashboard = () => {
     router.push("/employer/dashboard");
@@ -46,9 +49,14 @@ export default function Navbar() {
                     Dashboard
                   </button>
                 ) : userRole === "normal" ? (
-                  <Button onClick={handleBecomeEmployer} className="bg-primary text-primary-foreground hover:bg-primary/90">
-                    Become Employer
-                  </Button>
+                  <div className="flex gap-4">
+                    <Button onClick={handleBecomeEmployer} className="bg-primary text-primary-foreground hover:bg-primary/90">
+                      Become Employer
+                    </Button>
+                    <Button onClick={handleDashboard} className="bg-blue-600 text-primary-foreground hover:opacity-80 cursor-pointer">
+                      Go to Dashboard
+                    </Button>
+                  </div>
                 ) : null}
 
                 <button onClick={handleSignOut} className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors">
