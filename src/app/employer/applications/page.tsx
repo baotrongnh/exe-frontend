@@ -186,7 +186,7 @@ export default function EmployerApplicationsPage() {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`http://14.169.52.232:3003/api/applications/${applicationId}/status`, {
+      const response = await fetch(`https://exe201-sgk6.onrender.com/api/applications/${applicationId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -244,7 +244,7 @@ export default function EmployerApplicationsPage() {
         throw new Error('No authentication token found');
       }
 
-      const response = await fetch(`http://14.169.52.232:3003/api/applications/${applicationId}/status`, {
+      const response = await fetch(`https://exe201-sgk6.onrender.com/api/applications/${applicationId}/status`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
