@@ -1,5 +1,6 @@
 import axios from "axios";
 import { supabase } from "./supabase";
+import { API_BASE_URL } from "./api";
 import type {
   ApiResponse,
   DashboardOverview,
@@ -16,12 +17,9 @@ import type {
   ReviewsParams,
 } from "@/types/admin";
 
-// Base URL cho Admin Dashboard API - sử dụng localhost để test
-const ADMIN_API_BASE_URL = "https://exe201-sgk6.onrender.com/api";
-
 // Tạo axios instance cho Admin API
 const adminApiClient = axios.create({
-  baseURL: ADMIN_API_BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },

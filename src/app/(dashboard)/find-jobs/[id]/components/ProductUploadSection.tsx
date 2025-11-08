@@ -3,10 +3,8 @@ import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { api } from "@/lib/api"
+import { api, API_BASE_URL } from "@/lib/api"
 import { useToast } from "@/components/toast"
-
-const TEMP_API_URL = 'https://513q6dp9-5000.asse.devtunnels.ms'
 import {
     Upload,
     X,
@@ -170,7 +168,7 @@ export function ProductUploadSection({ jobId }: ProductUploadSectionProps) {
 
             // Use backend endpoint to download with proper Content-Disposition header
             // Backend will fetch from Firebase and return with attachment header
-            const downloadUrl = `${TEMP_API_URL}/api/job-products/${productId}/files/${fileIndex}`
+            const downloadUrl = `${API_BASE_URL}/api/job-products/${productId}/files/${fileIndex}`
             console.log("Fetching from backend:", downloadUrl)
 
             const response = await api.jobProducts.downloadFile(productId, fileIndex)
