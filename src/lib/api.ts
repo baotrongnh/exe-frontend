@@ -3,38 +3,13 @@ import { supabase } from "./supabase";
 
 // Base URL cho API backend
 export const API_BASE_URL = "https://exe201-sgk6.onrender.com"; // Backend API base URL
-const TEMP_API_URL = 'https://exe201-sgk6.onrender.com'
-const CV_API_BASE_URL = "https://exe201-sgk6.onrender.com/api";
-const VIDEO_CALL_API_BASE_URL = "https://exe201-sgk6.onrender.com"; // Video Call API base URL
 
-// Tạo axios instance cho general API
+// Tạo axios instance cho tất cả API calls
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     "Content-Type": "application/json",
   },
-});
-
-// Tạo axios instance riêng cho CV API
-const cvApiClient = axios.create({
-  baseURL: CV_API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-})
-
-// Tạo axios instance riêng cho Video Call API
-const videoCallApiClient = axios.create({
-  baseURL: VIDEO_CALL_API_BASE_URL,
-  headers: {
-    "Content-Type": "application/json",
-  },
-});
-
-// Tạo axios instance riêng cho Job Products API (temporary)
-// Don't set default Content-Type - let axios handle it based on data type (JSON vs FormData)
-const jobProductsApiClient = axios.create({
-  baseURL: TEMP_API_URL,
 });
 
 // Interceptor để tự động thêm access token vào header cho general API
@@ -78,131 +53,7 @@ apiClient.interceptors.request.use(
   }
 );
 
-// Interceptor để tự động thêm access token vào header cho CV API
-cvApiClient.interceptors.request.use(
-  async (config) => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log("CV API Session check:", {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        tokenPreview: session?.access_token
-          ? session.access_token.substring(0, 20) + "..."
-          : "none",
-      });
-
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
-        console.log(
-          "Adding auth token to CV API request:",
-          config.url,
-          "Token length:",
-          session.access_token.length
-        );
-      } else {
-        console.warn("No auth token available for CV API request:", config.url);
-        console.warn("User might not be authenticated for CV API");
-      }
-    } catch (error) {
-      console.error("Error getting session for CV API:", error);
-    }
-
-    return config;
-  },
-  (error) => {
-    console.error("CV API Request interceptor error:", error);
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor để tự động thêm access token vào header cho Video Call API
-videoCallApiClient.interceptors.request.use(
-  async (config) => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log("Video Call API Session check:", {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        tokenPreview: session?.access_token
-          ? session.access_token.substring(0, 20) + "..."
-          : "none",
-      });
-
-      if (session?.access_token) {
-        config.headers.Authorization = `Bearer ${session.access_token}`;
-        console.log(
-          "Adding auth token to Video Call API request:",
-          config.url,
-          "Token length:",
-          session.access_token.length
-        );
-      } else {
-        console.warn(
-          "No auth token available for Video Call API request:",
-          config.url
-        );
-        console.warn("User might not be authenticated for Video Call API");
-      }
-    } catch (error) {
-      console.error("Error getting session for Video Call API:", error);
-    }
-
-    return config;
-  },
-  (error) => {
-    console.error("Video Call API Request interceptor error:", error);
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor để tự động thêm access token vào header cho Job Products API
-jobProductsApiClient.interceptors.request.use(
-  async (config) => {
-    try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      console.log("Job Products API Session check:", {
-        hasSession: !!session,
-        hasAccessToken: !!session?.access_token,
-        tokenPreview: session?.access_token
-          ? session.access_token.substring(0, 20) + "..."
-          : "none",
-      });
-
-      if (session?.access_token) {
-        // Set authorization header - config.headers should already exist from axios
-        config.headers.Authorization = `Bearer ${session.access_token}`;
-        console.log(
-          "Adding auth token to Job Products API request:",
-          config.url,
-          "Token length:",
-          session.access_token.length
-        );
-      } else {
-        console.warn(
-          "No auth token available for Job Products API request:",
-          config.url
-        );
-        console.warn("User might not be authenticated for Job Products API");
-      }
-    } catch (error) {
-      console.error("Error getting session for Job Products API:", error);
-    }
-
-    return config;
-  },
-  (error) => {
-    console.error("Job Products API Request interceptor error:", error);
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor để xử lý response errors cho general API
+// Interceptor để xử lý response errors cho API
 apiClient.interceptors.response.use(
   (response) => {
     console.log(
@@ -230,106 +81,6 @@ apiClient.interceptors.response.use(
         console.error("No token was sent with the request");
       }
       // Có thể redirect đến trang login tại đây nếu cần
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor để xử lý response errors cho CV API
-cvApiClient.interceptors.response.use(
-  (response) => {
-    console.log(
-      "CV API Response successful:",
-      response.config.url,
-      response.status
-    );
-    return response;
-  },
-  (error) => {
-    console.error("CV API Error:", {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-    });
-
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Token hết hạn hoặc không hợp lệ
-      console.error("CV API Authentication failed - token invalid or missing");
-      // Check if it's specifically a "No token provided" error
-      if (error.response?.data?.message === "No token provided!") {
-        console.error("No token was sent with the CV API request");
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor để xử lý response errors cho Video Call API
-videoCallApiClient.interceptors.response.use(
-  (response) => {
-    console.log(
-      "Video Call API Response successful:",
-      response.config.url,
-      response.status
-    );
-    return response;
-  },
-  (error) => {
-    console.error("Video Call API Error:", {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-    });
-
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Token hết hạn hoặc không hợp lệ
-      console.error(
-        "Video Call API Authentication failed - token invalid or missing"
-      );
-      // Check if it's specifically a "No token provided" error
-      if (error.response?.data?.message === "No token provided!") {
-        console.error("No token was sent with the Video Call API request");
-      }
-    }
-    return Promise.reject(error);
-  }
-);
-
-// Interceptor để xử lý response errors cho Job Products API
-jobProductsApiClient.interceptors.response.use(
-  (response) => {
-    console.log(
-      "Job Products API Response successful:",
-      response.config.url,
-      response.status
-    );
-    return response;
-  },
-  (error) => {
-    console.error("Job Products API Error:", {
-      url: error.config?.url,
-      method: error.config?.method,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message,
-    });
-
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      // Token hết hạn hoặc không hợp lệ
-      console.error(
-        "Job Products API Authentication failed - token invalid or missing"
-      );
-      // Check if it's specifically a "No token provided" error
-      if (error.response?.data?.message === "No token provided!") {
-        console.error("No token was sent with the Job Products API request");
-      }
     }
     return Promise.reject(error);
   }
@@ -401,7 +152,7 @@ export const api = {
 
     // Accept an application (employer only)
     accept: async (applicationId: string, employerNotes?: string) => {
-      const response = await jobProductsApiClient.put(
+      const response = await apiClient.put(
         `/api/applications/${applicationId}/status`,
         {
           status: "accepted",
@@ -413,7 +164,7 @@ export const api = {
 
     // Reject an application (employer only)
     reject: async (applicationId: string, employerNotes?: string) => {
-      const response = await jobProductsApiClient.put(
+      const response = await apiClient.put(
         `/api/applications/${applicationId}/status`,
         {
           status: "rejected",
@@ -425,7 +176,7 @@ export const api = {
 
     // Complete an application (close the job)
     complete: async (applicationId: string) => {
-      const response = await jobProductsApiClient.post(`/api/applications/${applicationId}/complete`);
+      const response = await apiClient.post(`/api/applications/${applicationId}/complete`);
       return response.data;
     },
   },
@@ -466,7 +217,7 @@ export const api = {
 
       try {
         console.log("Sending upload request to:", "/cvs");
-        const response = await cvApiClient.post("/cvs", formData, {
+        const response = await apiClient.post("/api/cvs", formData, {
           headers: {
             "Content-Type": "multipart/form-data",
           },
@@ -486,14 +237,14 @@ export const api = {
     },
     // Delete CV
     delete: async (id: string | number) => {
-      const response = await cvApiClient.delete(`/cvs/${id}`);
+      const response = await apiClient.delete(`/api/cvs/${id}`);
       return response.data;
     },
 
     // Download CV
     download: async (id: string | number) => {
       try {
-        const response = await cvApiClient.get(`/cvs/${id}/download`, {
+        const response = await apiClient.get(`/api/cvs/${id}/download`, {
           responseType: "blob",
         });
         return response.data;
@@ -514,7 +265,7 @@ export const api = {
     // Get CV preview URL with authentication
     getPreviewUrl: async (id: string | number) => {
       try {
-        const blob = await cvApiClient.get(`/cvs/${id}/download`, {
+        const blob = await apiClient.get(`/api/cvs/${id}/download`, {
           responseType: "blob",
         });
         return URL.createObjectURL(blob.data);
@@ -532,7 +283,7 @@ export const api = {
 
     // Get direct API URL (for reference only, requires auth header)
     getDirectUrl: (id: string | number) => {
-      return `${CV_API_BASE_URL}/cvs/${id}/download`;
+      return `${API_BASE_URL}/api/cvs/${id}/download`;
     },
   },
 
@@ -739,7 +490,7 @@ export const api = {
   videoCall: {
     // Create a new video call session
     create: async (data?: { room_name?: string }) => {
-      const response = await videoCallApiClient.post(
+      const response = await apiClient.post(
         "/api/video/calls",
         data || {}
       );
@@ -748,7 +499,7 @@ export const api = {
 
     // Join an existing call
     join: async (callId: string) => {
-      const response = await videoCallApiClient.post(
+      const response = await apiClient.post(
         `/api/video/calls/${callId}/join`
       );
       return response.data;
@@ -756,7 +507,7 @@ export const api = {
 
     // End a call
     end: async (callId: string) => {
-      const response = await videoCallApiClient.post(
+      const response = await apiClient.post(
         `/api/video/calls/${callId}/end`
       );
       return response.data;
@@ -764,7 +515,7 @@ export const api = {
 
     // Get call details
     get: async (callId: string) => {
-      const response = await videoCallApiClient.get(
+      const response = await apiClient.get(
         `/api/video/calls/${callId}`
       );
       return response.data;
@@ -894,7 +645,7 @@ export const api = {
       try {
         // Don't set Content-Type manually - let browser set it with boundary
         console.log("Sending POST request to /api/job-products (Firebase Storage)");
-        const response = await jobProductsApiClient.post("/api/job-products", formData);
+        const response = await apiClient.post("/api/job-products", formData);
         console.log("Job Products Upload - Success (Firebase URLs):", response.data);
         // Response structure:
         // {
@@ -933,7 +684,7 @@ export const api = {
       sort?: string;
       order?: "ASC" | "DESC";
     }) => {
-      const response = await jobProductsApiClient.get("/api/job-products", { params });
+      const response = await apiClient.get("/api/job-products", { params });
       // Response structure:
       // {
       //   success: true,
@@ -964,13 +715,13 @@ export const api = {
 
     // Get a specific product
     getById: async (id: string) => {
-      const response = await jobProductsApiClient.get(`/api/job-products/${id}`);
+      const response = await apiClient.get(`/api/job-products/${id}`);
       return response.data;
     },
 
     // Delete job product (pending only)
     delete: async (id: string) => {
-      const response = await jobProductsApiClient.delete(`/api/job-products/${id}`);
+      const response = await apiClient.delete(`/api/job-products/${id}`);
       return response.data;
     },
 
@@ -984,7 +735,7 @@ export const api = {
 
       // Simply return the API endpoint URL
       // The backend will handle the file download directly
-      const downloadUrl = `${TEMP_API_URL}/api/job-products/${id}/files/${fileIndex}`;
+      const downloadUrl = `${API_BASE_URL}/api/job-products/${id}/files/${fileIndex}`;
       console.log("Download URL:", downloadUrl);
 
       return downloadUrl;
@@ -1001,7 +752,7 @@ export const api = {
         order?: "ASC" | "DESC";
       }
     ) => {
-      const response = await jobProductsApiClient.get(`/api/job-products/by-job/${jobId}`, { params });
+      const response = await apiClient.get(`/api/job-products/by-job/${jobId}`, { params });
       return response.data;
     },
 
@@ -1010,7 +761,7 @@ export const api = {
       status: "approved" | "rejected";
       rejection_reason?: string;
     }) => {
-      const response = await jobProductsApiClient.patch(`/api/job-products/${id}/review`, data);
+      const response = await apiClient.patch(`/api/job-products/${id}/review`, data);
       return response.data;
     },
   },

@@ -3,8 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { io, Socket } from "socket.io-client";
 import { supabase } from "@/lib/supabase";
-
-const VIDEO_CALL_SERVER_URL = "https://exe201-sgk6.onrender.com";
+import { API_BASE_URL } from "@/lib/api";
 
 export function useVideoCallSocket() {
   const [socket, setSocket] = useState<Socket | null>(null);
@@ -44,7 +43,7 @@ export function useVideoCallSocket() {
         console.log("🎥 Initializing video call socket for user:", userId);
 
         // Create socket connection
-        const socketInstance = io(VIDEO_CALL_SERVER_URL, {
+        const socketInstance = io(API_BASE_URL, {
           auth: {
             token: session.access_token,
           },

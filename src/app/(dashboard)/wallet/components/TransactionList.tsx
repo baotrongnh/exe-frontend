@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { WalletTransaction } from "@/types/wallet"
 import { Loader2, ArrowUpRight, ArrowDownRight, Clock, Receipt } from "lucide-react"
+import { useAuth } from "@/contexts/AuthContext"
 
 interface TransactionListProps {
     transactions: WalletTransaction[]
@@ -11,6 +12,15 @@ interface TransactionListProps {
 }
 
 export function TransactionList({ transactions, loading, onRetry }: TransactionListProps) {
+    const { userRole } = useAuth()
+
+    console.log('🔍 TransactionList render:', {
+        transactionCount: transactions.length,
+        loading,
+        userRole,
+        firstTransaction: transactions[0]
+    })
+
     const formatCurrency = (amount: number | string) => {
         const numAmount = typeof amount === "string" ? parseFloat(amount) : amount
         return new Intl.NumberFormat("vi-VN", {
@@ -19,19 +29,50 @@ export function TransactionList({ transactions, loading, onRetry }: TransactionL
         }).format(numAmount)
     }
 
-    const getTransactionIcon = (type: string) => {
-        const upperType = type.toUpperCase()
-        switch (upperType) {
-            case "DEPOSIT":
-            case "REFUND":
-            case "PAYMENT_RECEIVED":
-                return <ArrowDownRight className="h-4 w-4 text-green-600" />
-            case "WITHDRAW":
-            case "PAYMENT":
-            case "SERVICE_FEE":
-                return <ArrowUpRight className="h-4 w-4 text-red-600" />
-            default:
-                return <Clock className="h-4 w-4" />
+    const isIncomeTransaction = (transaction: WalletTransaction) => {
+        const upperType = transaction.transaction_type.toUpperCase()
+
+        // PRIMARY CHECK: Use reference_type to determine income/expense for JOB_POST transactions
+        if (upperType === "JOB_POST" && transaction.reference_type) {
+            const refType = transaction.reference_type.toUpperCase()
+            // JOB_COMPLETED = freelancer receiving payment (income +)
+            // JOB = employer paying for job (expense -)
+            return refType === "JOB_COMPLETED"
+        }
+
+        // SECONDARY CHECK: If balance_before and balance_after are available, check if balance increased
+        if (transaction.balance_before !== undefined && transaction.balance_after !== undefined) {
+            const before = typeof transaction.balance_before === "string"
+                ? parseFloat(transaction.balance_before)
+                : transaction.balance_before
+            const after = typeof transaction.balance_after === "string"
+                ? parseFloat(transaction.balance_after)
+                : transaction.balance_after
+            return after > before
+        }
+
+        // FALLBACK: For other transaction types, use role-based logic
+        // For freelancers (normal users), receiving payment is income (+)
+        if (userRole === 'normal' || !userRole) {
+            return upperType === "DEPOSIT" ||
+                upperType === "REFUND" ||
+                upperType === "PAYMENT_RECEIVED" ||
+                upperType === "PAYMENT"  // Freelancer receiving payment for work
+        }
+
+        // For employers, only deposits and refunds are income
+        return upperType === "DEPOSIT" ||
+            upperType === "REFUND" ||
+            upperType === "PAYMENT_RECEIVED"
+    }
+
+    const getTransactionIcon = (transaction: WalletTransaction) => {
+        const isIncome = isIncomeTransaction(transaction)
+
+        if (isIncome) {
+            return <ArrowDownRight className="h-4 w-4 text-green-600" />
+        } else {
+            return <ArrowUpRight className="h-4 w-4 text-red-600" />
         }
     }
 
@@ -47,11 +88,6 @@ export function TransactionList({ transactions, loading, onRetry }: TransactionL
         }
 
         return <Badge variant={variants[status] || "outline"}>{status}</Badge>
-    }
-
-    const isIncomeTransaction = (type: string) => {
-        const upperType = type.toUpperCase()
-        return upperType === "DEPOSIT" || upperType === "REFUND" || upperType === "PAYMENT_RECEIVED"
     }
 
     return (
@@ -109,7 +145,7 @@ export function TransactionList({ transactions, loading, onRetry }: TransactionL
                             >
                                 <div className="flex items-center gap-4">
                                     <div className="p-3 rounded-xl bg-muted shadow-sm">
-                                        {getTransactionIcon(transaction.transaction_type)}
+                                        {getTransactionIcon(transaction)}
                                     </div>
                                     <div>
                                         <p className="font-semibold capitalize text-foreground">
@@ -128,12 +164,12 @@ export function TransactionList({ transactions, loading, onRetry }: TransactionL
                                 </div>
                                 <div className="text-right space-y-1">
                                     <p
-                                        className={`font-bold text-lg ${isIncomeTransaction(transaction.transaction_type)
-                                                ? "text-green-600"
-                                                : "text-red-600"
+                                        className={`font-bold text-lg ${isIncomeTransaction(transaction)
+                                            ? "text-green-600"
+                                            : "text-red-600"
                                             }`}
                                     >
-                                        {isIncomeTransaction(transaction.transaction_type) ? "+" : "-"}
+                                        {isIncomeTransaction(transaction) ? "+" : "-"}
                                         {formatCurrency(transaction.amount)}
                                     </p>
                                     {getStatusBadge(transaction.status)}
