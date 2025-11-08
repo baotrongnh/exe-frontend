@@ -2,7 +2,7 @@ import axios, { AxiosError } from "axios";
 import { supabase } from "./supabase";
 
 // Base URL cho API backend
-export const API_BASE_URL = "https://exe201-sgk6.onrender.com"; // Backend API base URL
+export const API_BASE_URL = "https://513q6dp9-5000.asse.devtunnels.ms/"; // Backend API base URL
 
 // Tạo axios instance cho tất cả API calls
 const apiClient = axios.create({
@@ -40,6 +40,14 @@ apiClient.interceptors.request.use(
         console.warn("No auth token available for request:", config.url);
         // You might want to throw an error here or redirect to login
         console.warn("User might not be authenticated");
+      }
+
+      // IMPORTANT: If request body is FormData, delete Content-Type to let browser set it with boundary
+      if (config.data instanceof FormData) {
+        delete config.headers["Content-Type"];
+        console.log(
+          "FormData detected - removed Content-Type header to let browser set boundary"
+        );
       }
     } catch (error) {
       console.error("Error getting session:", error);
@@ -176,7 +184,9 @@ export const api = {
 
     // Complete an application (close the job)
     complete: async (applicationId: string) => {
-      const response = await apiClient.post(`/api/applications/${applicationId}/complete`);
+      const response = await apiClient.post(
+        `/api/applications/${applicationId}/complete`
+      );
       return response.data;
     },
   },
@@ -490,34 +500,25 @@ export const api = {
   videoCall: {
     // Create a new video call session
     create: async (data?: { room_name?: string }) => {
-      const response = await apiClient.post(
-        "/api/video/calls",
-        data || {}
-      );
+      const response = await apiClient.post("/api/video/calls", data || {});
       return response.data;
     },
 
     // Join an existing call
     join: async (callId: string) => {
-      const response = await apiClient.post(
-        `/api/video/calls/${callId}/join`
-      );
+      const response = await apiClient.post(`/api/video/calls/${callId}/join`);
       return response.data;
     },
 
     // End a call
     end: async (callId: string) => {
-      const response = await apiClient.post(
-        `/api/video/calls/${callId}/end`
-      );
+      const response = await apiClient.post(`/api/video/calls/${callId}/end`);
       return response.data;
     },
 
     // Get call details
     get: async (callId: string) => {
-      const response = await apiClient.get(
-        `/api/video/calls/${callId}`
-      );
+      const response = await apiClient.get(`/api/video/calls/${callId}`);
       return response.data;
     },
   },
@@ -525,14 +526,23 @@ export const api = {
   // Deliverables APIs
   deliverables: {
     // Get all deliverables (for employer - all jobs)
-    getAll: async (params?: { page?: number; limit?: number; status?: string }) => {
+    getAll: async (params?: {
+      page?: number;
+      limit?: number;
+      status?: string;
+    }) => {
       const response = await apiClient.get("/api/deliverables", { params });
       return response.data;
     },
 
     // Get deliverables for a specific job
-    getByJob: async (jobId: string, params?: { page?: number; limit?: number }) => {
-      const response = await apiClient.get(`/api/jobs/${jobId}/deliverables`, { params });
+    getByJob: async (
+      jobId: string,
+      params?: { page?: number; limit?: number }
+    ) => {
+      const response = await apiClient.get(`/api/jobs/${jobId}/deliverables`, {
+        params,
+      });
       return response.data;
     },
 
@@ -574,21 +584,30 @@ export const api = {
 
     // Reject a deliverable (employer)
     reject: async (id: string, data: { reason: string }) => {
-      const response = await apiClient.patch(`/api/deliverables/${id}/reject`, data);
+      const response = await apiClient.patch(
+        `/api/deliverables/${id}/reject`,
+        data
+      );
       return response.data;
     },
 
     // Request revision (employer)
     requestRevision: async (id: string, data: { notes: string }) => {
-      const response = await apiClient.patch(`/api/deliverables/${id}/revision`, data);
+      const response = await apiClient.patch(
+        `/api/deliverables/${id}/revision`,
+        data
+      );
       return response.data;
     },
 
     // Download deliverable file
     downloadFile: async (id: string, fileName: string) => {
-      const response = await apiClient.get(`/api/deliverables/${id}/files/${fileName}`, {
-        responseType: "blob",
-      });
+      const response = await apiClient.get(
+        `/api/deliverables/${id}/files/${fileName}`,
+        {
+          responseType: "blob",
+        }
+      );
       return response.data;
     },
   },
@@ -597,8 +616,8 @@ export const api = {
   jobProducts: {
     // Upload job product with Firebase Storage
     // Files are automatically uploaded to Firebase Storage and stored as public URLs
-    // Maximum 10 files per upload, 25MB per file
-    // Supported formats: PDF, DOC, DOCX, XLS, XLSX, ZIP, JPG, PNG, GIF, TXT
+    // Maximum 5 files per upload, 100MB per file
+    // Supported formats: PDF, DOC, DOCX, XLS, XLSX, ZIP, JPG, PNG, GIF, TXT, MP4, MOV, AVI, MKV, WebM, FLV, WMV
     upload: async (data: {
       job_id: string;
       title: string;
@@ -610,19 +629,23 @@ export const api = {
         title: data.title,
         description: data.description,
         fileCount: data.files.length,
-        files: data.files.map(f => ({ name: f.name, size: f.size, type: f.type }))
+        files: data.files.map((f) => ({
+          name: f.name,
+          size: f.size,
+          type: f.type,
+        })),
       });
 
       // Validate file count
-      if (data.files.length > 10) {
-        throw new Error("Maximum 10 files allowed per upload");
+      if (data.files.length > 5) {
+        throw new Error("Maximum 5 files allowed per upload");
       }
 
       // Validate file sizes
-      const maxSize = 25 * 1024 * 1024; // 25MB
+      const maxSize = 100 * 1024 * 1024; // 100MB (supports video files)
       for (const file of data.files) {
         if (file.size > maxSize) {
-          throw new Error(`File ${file.name} exceeds 25MB limit`);
+          throw new Error(`File ${file.name} exceeds 100MB limit`);
         }
       }
 
@@ -644,9 +667,15 @@ export const api = {
 
       try {
         // Don't set Content-Type manually - let browser set it with boundary
-        console.log("Sending POST request to /api/job-products (Firebase Storage)");
+        // The interceptor will handle removing the default Content-Type header
+        console.log(
+          "Sending POST request to /api/job-products (Firebase Storage)"
+        );
         const response = await apiClient.post("/api/job-products", formData);
-        console.log("Job Products Upload - Success (Firebase URLs):", response.data);
+        console.log(
+          "Job Products Upload - Success (Firebase URLs):",
+          response.data
+        );
         // Response structure:
         // {
         //   success: true,
@@ -752,16 +781,25 @@ export const api = {
         order?: "ASC" | "DESC";
       }
     ) => {
-      const response = await apiClient.get(`/api/job-products/by-job/${jobId}`, { params });
+      const response = await apiClient.get(
+        `/api/job-products/by-job/${jobId}`,
+        { params }
+      );
       return response.data;
     },
 
     // Review a product (employer only)
-    review: async (id: string, data: {
-      status: "approved" | "rejected";
-      rejection_reason?: string;
-    }) => {
-      const response = await apiClient.patch(`/api/job-products/${id}/review`, data);
+    review: async (
+      id: string,
+      data: {
+        status: "approved" | "rejected";
+        rejection_reason?: string;
+      }
+    ) => {
+      const response = await apiClient.patch(
+        `/api/job-products/${id}/review`,
+        data
+      );
       return response.data;
     },
   },
