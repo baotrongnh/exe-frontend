@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import apiClient, { api } from "@/lib/api"
+import { useToast } from "@/components/toast"
 
 interface JobPost {
      id: string
@@ -50,6 +51,7 @@ export default function JobApprovalsPage() {
      const [jobPosts, setJobPosts] = useState<JobPostDisplay[]>([])
      const [loading, setLoading] = useState(true)
      const [actionLoading, setActionLoading] = useState<string | null>(null) // Track which job is being processed
+     const toast = useToast()
 
      useEffect(() => {
           fetchPendingJobs()
@@ -137,13 +139,13 @@ export default function JobApprovalsPage() {
                )
 
                // Show success message (you can add toast notification here)
-               alert("Job approved successfully!")
+               toast.showToast("Job approved successfully!", "success")
 
                // Refresh the list
                await fetchPendingJobs()
           } catch (error) {
                console.error("Error approving job:", error)
-               alert("Failed to approve job. Please try again.")
+               toast.showToast("Failed to approve job. Please try again.", "error")
           } finally {
                setActionLoading(null)
           }
@@ -168,13 +170,13 @@ export default function JobApprovalsPage() {
                )
 
                // Show success message
-               alert("Job rejected successfully!")
+               toast.showToast("Job rejected successfully!", "success")
 
                // Refresh the list
                await fetchPendingJobs()
           } catch (error) {
                console.error("Error rejecting job:", error)
-               alert("Failed to reject job. Please try again.")
+               toast.showToast("Failed to reject job. Please try again.", "error")
           } finally {
                setActionLoading(null)
           }

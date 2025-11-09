@@ -10,6 +10,7 @@ import { api } from "@/lib/api"
 import { useParams } from "next/navigation"
 import { RatingModal } from "@/components/RatingModal"
 import { useAuth } from "@/contexts/AuthContext"
+import { useToast } from "@/components/toast"
 
 // Type cho Job Detail
 interface JobDetail {
@@ -49,6 +50,7 @@ export default function FreelancerJobDetailPage() {
     const params = useParams()
     const jobId = params.id as string
     const { user } = useAuth()
+    const toast = useToast()
 
     const [job, setJob] = useState<JobDetail | null>(null)
     const [application, setApplication] = useState<Application | null>(null)
@@ -108,12 +110,12 @@ export default function FreelancerJobDetailPage() {
                 rating,
                 comment: comment || undefined,
             })
-            alert("Thank you for your feedback!")
+            toast.showToast("Thank you for your feedback!", "success")
             setRatingModalOpen(false)
             setHasReviewed(true)
         } catch (error) {
             console.error("Error submitting rating:", error)
-            alert("Failed to submit rating. Please try again.")
+            toast.showToast("Failed to submit rating. Please try again.", "error")
         } finally {
             setSubmittingRating(false)
         }

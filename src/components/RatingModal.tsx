@@ -26,10 +26,12 @@ export function RatingModal({
     const [rating, setRating] = useState(0)
     const [hoverRating, setHoverRating] = useState(0)
     const [comment, setComment] = useState("")
+    const [showError, setShowError] = useState(false)
 
     const handleSubmit = async () => {
         if (rating === 0) {
-            alert("Please select a rating")
+            setShowError(true)
+            setTimeout(() => setShowError(false), 3000)
             return
         }
 
@@ -39,6 +41,7 @@ export function RatingModal({
             setRating(0)
             setHoverRating(0)
             setComment("")
+            setShowError(false)
         } catch (error) {
             console.error("Error submitting rating:", error)
         }
@@ -69,20 +72,28 @@ export function RatingModal({
                                 <button
                                     key={star}
                                     type="button"
-                                    onClick={() => setRating(star)}
+                                    onClick={() => {
+                                        setRating(star)
+                                        setShowError(false)
+                                    }}
                                     onMouseEnter={() => setHoverRating(star)}
                                     onMouseLeave={() => setHoverRating(0)}
                                     className="transition-transform hover:scale-110 focus:outline-none"
                                 >
                                     <Star
                                         className={`w-12 h-12 ${star <= (hoverRating || rating)
-                                                ? "fill-yellow-400 text-yellow-400"
-                                                : "fill-none text-gray-300"
+                                            ? "fill-yellow-400 text-yellow-400"
+                                            : "fill-none text-gray-300"
                                             }`}
                                     />
                                 </button>
                             ))}
                         </div>
+                        {showError && (
+                            <p className="text-sm text-red-600 font-medium animate-pulse">
+                                Please select a rating before submitting
+                            </p>
+                        )}
                         <p className="text-sm text-gray-600">
                             {rating > 0 && (
                                 <span className="font-semibold text-gray-900">

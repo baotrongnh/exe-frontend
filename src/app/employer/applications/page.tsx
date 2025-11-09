@@ -82,14 +82,14 @@ export default function EmployerApplicationsPage() {
           setProfile(response);
 
           if (!response.is_verified) {
-            alert("You need to be verified to view applications");
+            toast.showToast("You need to be verified to view applications", "warning");
             router.push("/employer/dashboard");
           }
         } else {
-          alert("Failed to fetch profile");
+          toast.showToast("Failed to fetch profile", "error");
         }
       } catch {
-        alert("Failed to fetch profile");
+        toast.showToast("Failed to fetch profile", "error");
       }
     };
 
@@ -133,7 +133,7 @@ export default function EmployerApplicationsPage() {
           setApplications(allApplications);
         }
       } catch {
-        alert("Failed to load applications");
+        toast.showToast("Failed to load applications", "error");
       } finally {
         setLoading(false);
       }
@@ -169,7 +169,7 @@ export default function EmployerApplicationsPage() {
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
     } catch {
-      alert("Failed to download CV");
+      toast.showToast("Failed to download CV", "error");
     }
   };
 
@@ -259,10 +259,10 @@ export default function EmployerApplicationsPage() {
 
       await api.conversations.create(payload);
 
-      alert("Interview scheduled! A conversation has been created.");
+      toast.showToast("Interview scheduled! A conversation has been created.", "success");
 
     } catch {
-      alert("Failed to schedule interview. Please try again.");
+      toast.showToast("Failed to schedule interview. Please try again.", "error");
     } finally {
       setActionLoading(null);
     }
