@@ -61,7 +61,7 @@ export function JobCard({ job, searchQuery, onApply, isApplying, isApplied }: Jo
         }
 
         if (job.currency === "VND") {
-            return `${(cost / 1000000).toFixed(1)}tr VNĐ`
+            return `${cost.toLocaleString('vi-VN')} VNĐ`
         }
         return `$${cost.toFixed(2)}`
     }

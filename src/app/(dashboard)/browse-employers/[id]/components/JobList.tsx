@@ -57,7 +57,7 @@ export function JobList({ jobs, onApply, applyingJobId, appliedJobs }: JobListPr
         }
 
         if (job.currency === "VND") {
-            return `${(cost / 1000000).toFixed(1)}tr VNĐ`
+            return `${cost.toLocaleString('vi-VN')} VNĐ`
         }
         return `$${cost.toFixed(2)}`
     }

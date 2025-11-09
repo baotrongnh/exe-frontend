@@ -63,7 +63,7 @@ export default function JobApprovalsPage() {
           let salary = "Contact for price"
           if (!isNaN(cost) && cost > 0) {
                if (job.currency === "VND") {
-                    salary = `${(cost / 1000000).toFixed(1)}tr VNĐ`
+                    salary = `${cost.toLocaleString('vi-VN')} VNĐ`
                } else {
                     salary = `$${cost.toFixed(2)}`
                }
