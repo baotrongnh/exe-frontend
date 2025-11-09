@@ -208,7 +208,7 @@ export function EmployerSidebar() {
                               </svg>
                          </div>
                          <div>
-                              <div className="font-bold text-gray-900">JobBoost</div>
+                              <div className="font-bold text-gray-900">Sworker</div>
                               <div className="text-xs text-gray-500">Employer</div>
                          </div>
                     </div>

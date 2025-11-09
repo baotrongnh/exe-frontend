@@ -21,7 +21,7 @@ export default function AdminLoginPage() {
           setLoading(true)
 
           // Simple demo authentication
-          if (email === "admin@jobboost.com" && password === "admin123") {
+          if (email === "admin@sworker.com" && password === "admin123") {
                // Store admin session
                localStorage.setItem("adminAuth", "true")
                router.push("/admin/dashboard")
@@ -48,7 +48,7 @@ export default function AdminLoginPage() {
                                         />
                                    </svg>
                               </div>
-                              <span className="text-xl font-bold text-gray-900">JobBoost Admin</span>
+                              <span className="text-xl font-bold text-gray-900">Sworker Admin</span>
                          </div>
 
                          <h1 className="text-2xl font-bold text-gray-900 mb-2">Welcome back</h1>
@@ -60,7 +60,7 @@ export default function AdminLoginPage() {
                                    <Input
                                         id="email"
                                         type="email"
-                                        placeholder="admin@jobboost.com"
+                                        placeholder="admin@sworker.com"
                                         value={email}
                                         onChange={(e) => setEmail(e.target.value)}
                                         required
@@ -90,7 +90,7 @@ export default function AdminLoginPage() {
                               </Button>
                          </form>
 
-                         <div className="mt-6 text-center text-sm text-gray-600">Demo credentials: admin@jobboost.com / admin123</div>
+                         <div className="mt-6 text-center text-sm text-gray-600">Demo credentials: admin@sworker.com / admin123</div>
                     </div>
                </div>
           </div>
