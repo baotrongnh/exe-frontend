@@ -195,6 +195,7 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
         initiateCall,
         acceptCall: videoAcceptCall,
         endCall: videoEndCall,
+        resetCallState,
         toggleMute,
         toggleVideo,
     } = useVideoCall({
@@ -468,7 +469,15 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
 
     const handleStartCall = () => {
         if (selectedCandidate) {
-            console.log("📞 Starting call to", selectedCandidate.id);
+            console.log("📞 Starting call to candidate:", {
+                candidateId: selectedCandidate.id,
+                candidateName: selectedCandidate.name,
+                candidateTitle: selectedCandidate.title,
+            });
+            console.log("📞 Current user (caller):", socketCurrentUserId);
+            console.log("📞 Socket connected:", isConnected);
+            console.log("📞 Socket instance:", socket ? "Available" : "Not available");
+
             initiateCall(selectedCandidate.id);
         }
     };
@@ -483,7 +492,15 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
 
     const handleDeclineCall = () => {
         console.log("❌ Declining call");
-        videoEndCall();
+        // Send decline notification if needed
+        if (incomingCallData?.callId && socket) {
+            socket.emit("webrtc:end-call", {
+                to: incomingCallData.from,
+                callId: incomingCallData.callId,
+            });
+        }
+        // Reset call state immediately without showing "ended" screen
+        resetCallState();
         setIncomingCallData(null);
     };
 
@@ -629,7 +646,12 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
                 }
                 onClose={() => {
                     console.log("🚪 Closing video call modal");
-                    videoEndCall();
+                    // If call is active, end it first
+                    if (callData.status === "connected" || callData.status === "connecting" || callData.status === "ringing") {
+                        videoEndCall();
+                    }
+                    // Reset to idle state to fully close modal
+                    resetCallState();
                     setIncomingCallData(null);
                 }}
                 onAccept={
