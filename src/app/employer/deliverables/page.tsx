@@ -24,7 +24,7 @@ interface Deliverable {
     title: string;
     description: string;
     status: "pending" | "approved" | "rejected";
-    files: ProductFile[];
+    files: (ProductFile | string)[];
     created_at: string;
     reviewed_at?: string | null;
     rejection_reason?: string | null;

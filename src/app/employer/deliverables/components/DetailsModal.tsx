@@ -32,7 +32,7 @@ interface Deliverable {
     title: string;
     description: string;
     status: "pending" | "approved" | "rejected";
-    files: ProductFile[];
+    files: (ProductFile | string)[];
     created_at: string;
     reviewed_at?: string | null;
     rejection_reason?: string | null;
@@ -141,33 +141,44 @@ export function DetailsModal({
                                 Attached Files ({deliverable.files.length})
                             </h4>
                             <div className="space-y-2">
-                                {deliverable.files.map((file, index) => (
-                                    <div
-                                        key={index}
-                                        className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
-                                    >
-                                        <div className="flex items-center gap-3 flex-1 min-w-0">
-                                            <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                                                <FileText className="w-5 h-5 text-indigo-600" />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <p className="font-medium text-gray-900 truncate">{file.name}</p>
-                                                <p className="text-xs text-gray-500">
-                                                    {(file.size / 1024).toFixed(1)} KB • {file.mimetype}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <Button
-                                            size="sm"
-                                            variant="outline"
-                                            onClick={() => onDownloadFile(file.path, file.name, deliverable.id, index)}
-                                            className="gap-2 flex-shrink-0"
+                                {deliverable.files.map((file, index) => {
+                                    const fileUrl = typeof file === 'string' ? file : file.path
+                                    const fileName = typeof file === 'string'
+                                        ? file.split('/').pop()?.split('?')[0] || `File ${index + 1}`
+                                        : file.name
+                                    const fileSize = typeof file === 'string' ? 0 : file.size
+                                    const fileMimeType = typeof file === 'string' ? '' : file.mimetype
+
+                                    return (
+                                        <div
+                                            key={index}
+                                            className="flex items-center justify-between p-3 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg transition-colors"
                                         >
-                                            <Download className="w-4 h-4" />
-                                            Download
-                                        </Button>
-                                    </div>
-                                ))}
+                                            <div className="flex items-center gap-3 flex-1 min-w-0">
+                                                <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                                                    <FileText className="w-5 h-5 text-indigo-600" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="font-medium text-gray-900 truncate">{fileName}</p>
+                                                    {fileSize > 0 && (
+                                                        <p className="text-xs text-gray-500">
+                                                            {(fileSize / 1024).toFixed(1)} KB{fileMimeType && ` • ${fileMimeType}`}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                            <Button
+                                                size="sm"
+                                                variant="outline"
+                                                onClick={() => onDownloadFile(fileUrl, fileName, deliverable.id, index)}
+                                                className="gap-2 flex-shrink-0"
+                                            >
+                                                <Download className="w-4 h-4" />
+                                                Download
+                                            </Button>
+                                        </div>
+                                    )
+                                })}
                             </div>
                         </div>
                     )}
