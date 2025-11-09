@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Star, User, MessageSquare, Calendar, CheckCircle, TrendingUp, Briefcase } from 'lucide-react'
 import { api } from '@/lib/api'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
+import { useToast } from '@/components/toast'
 
 // Chart Colors
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6']
@@ -84,6 +85,7 @@ export default function ReviewsPage() {
     const [verifiedFilter, setVerifiedFilter] = useState<'all' | 'verified' | 'unverified'>('all')
     const [currentPage, setCurrentPage] = useState(1)
     const itemsPerPage = 10
+    const toast = useToast()
 
     // Fetch Reviews from API
     useEffect(() => {
@@ -104,13 +106,13 @@ export default function ReviewsPage() {
                 console.error('Invalid response structure:', response)
                 setReviewsData(null)
                 setFilteredReviews([])
-                alert('No reviews data available.')
+                toast.showToast('No reviews data available.', 'info')
             }
         } catch (err: unknown) {
             console.error('Error fetching reviews:', err)
             setReviewsData(null)
             setFilteredReviews([])
-            alert('Failed to load reviews. Please try again.')
+            toast.showToast('Failed to load reviews. Please try again.', 'error')
         } finally {
             setLoading(false)
         }

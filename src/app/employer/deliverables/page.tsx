@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Search, Filter, Package, FileDown, Loader2 } from "lucide-react";
 import { DeliverableCard, RejectModal, DetailsModal, StatsCards } from "./components";
+import { useToast } from "@/components/toast";
 
 interface ProductFile {
     name: string;
@@ -60,6 +61,7 @@ export default function EmployerDeliverablesPage() {
 
     const { user } = useAuth();
     const router = useRouter();
+    const toast = useToast();
 
     // Check authentication and verification status
     useEffect(() => {
@@ -77,16 +79,16 @@ export default function EmployerDeliverablesPage() {
                     setProfile(response);
 
                     if (!response.is_verified) {
-                        alert("You need to be verified to view deliverables");
+                        toast.showToast("You need to be verified to view deliverables", "warning");
                         router.push("/employer/dashboard");
                     }
                 } else {
                     console.error("Invalid profile response:", response);
-                    alert("Failed to fetch profile");
+                    toast.showToast("Failed to fetch profile", "error");
                 }
             } catch (error) {
                 console.error("Error fetching profile:", error);
-                alert("Failed to fetch profile");
+                toast.showToast("Failed to fetch profile", "error");
             }
         };
 
@@ -149,7 +151,7 @@ export default function EmployerDeliverablesPage() {
                 setDeliverables(allProducts);
             } catch (error) {
                 console.error("Error fetching deliverables:", error);
-                alert("Failed to load deliverables");
+                toast.showToast("Failed to load deliverables", "error");
             } finally {
                 setLoading(false);
             }
@@ -197,10 +199,10 @@ export default function EmployerDeliverablesPage() {
                 )
             );
 
-            alert("Product approved successfully!");
+            toast.showToast("Product approved successfully!", "success");
         } catch (error) {
             console.error("Error approving product:", error);
-            alert("Failed to approve product. Please try again.");
+            toast.showToast("Failed to approve product. Please try again.", "error");
         } finally {
             setActionLoading(null);
         }
@@ -216,7 +218,7 @@ export default function EmployerDeliverablesPage() {
     // Handle Reject Product
     const handleReject = async () => {
         if (!selectedDeliverable || !rejectionReason.trim()) {
-            alert("Please provide a reason for rejection");
+            toast.showToast("Please provide a reason for rejection", "warning");
             return;
         }
 
@@ -246,13 +248,13 @@ export default function EmployerDeliverablesPage() {
                 )
             );
 
-            alert("Product rejected successfully!");
+            toast.showToast("Product rejected successfully!", "success");
             setRejectModalOpen(false);
             setSelectedDeliverable(null);
             setRejectionReason("");
         } catch (error) {
             console.error("Error rejecting product:", error);
-            alert("Failed to reject product. Please try again.");
+            toast.showToast("Failed to reject product. Please try again.", "error");
         } finally {
             setActionLoading(null);
         }
@@ -311,18 +313,18 @@ export default function EmployerDeliverablesPage() {
                 console.log("=== DOWNLOAD SUCCESS ===");
             }, 100);
 
-            alert("Download started! Check your Downloads folder.");
+            toast.showToast("Download started! Check your Downloads folder.", "success");
         } catch (error) {
             console.error("=== DOWNLOAD ERROR ===", error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-            alert(`Download failed: ${errorMessage}. Opening file in new tab...`);
+            toast.showToast(`Download failed: ${errorMessage}. Opening file in new tab...`, "warning");
 
             // Fallback: use original file URL (Firebase direct URL)
             if (fileUrl && fileUrl !== '') {
                 console.log("Falling back to original file URL:", fileUrl);
                 window.open(fileUrl, '_blank');
             } else {
-                alert("Failed to download file. Please try again.");
+                toast.showToast("Failed to download file. Please try again.", "error");
             }
         }
     };

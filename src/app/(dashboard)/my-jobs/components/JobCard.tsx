@@ -1,9 +1,15 @@
+"use client"
+
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Calendar, DollarSign, Upload, Star } from "lucide-react"
+import { useState } from "react"
+import { RatingModal } from "@/components/RatingModal"
+import { api } from "@/lib/api"
+import { useToast } from "@/components/toast"
 
 interface Job {
     id: string
@@ -39,6 +45,10 @@ interface JobCardProps {
 export function JobCard({ application }: JobCardProps) {
     const router = useRouter()
     const { job } = application
+    const toast = useToast()
+    const [ratingModalOpen, setRatingModalOpen] = useState(false)
+    const [submittingRating, setSubmittingRating] = useState(false)
+    const [hasReviewed, setHasReviewed] = useState(false)
 
     const getJobTypeBadgeColor = (type: string) => {
         const colors: Record<string, string> = {
@@ -113,6 +123,25 @@ export function JobCard({ application }: JobCardProps) {
         }
     }
 
+    const handleRatingSubmit = async (rating: number, comment: string) => {
+        try {
+            setSubmittingRating(true)
+            await api.jobReviews.create({
+                job_id: job.id,
+                rating,
+                comment: comment || undefined,
+            })
+            toast.showToast("Thank you for your feedback!", "success")
+            setRatingModalOpen(false)
+            setHasReviewed(true)
+        } catch (error) {
+            console.error("Error submitting rating:", error)
+            toast.showToast("Failed to submit rating. Please try again.", "error")
+        } finally {
+            setSubmittingRating(false)
+        }
+    }
+
     return (
         <Card className="overflow-hidden">
             <div className="p-6">
@@ -177,12 +206,23 @@ export function JobCard({ application }: JobCardProps) {
 
                     <div className="flex flex-col gap-2 min-w-[160px]">
                         {application.status === 'completed' ? (
-                            <Link href={`/my-jobs/${job.id}`} className="w-full">
-                                <Button className="w-full bg-yellow-500 hover:bg-yellow-600">
+                            hasReviewed ? (
+                                <Button
+                                    disabled
+                                    className="w-full bg-gray-400 text-white cursor-not-allowed"
+                                >
+                                    <Star className="w-4 h-4 mr-2 fill-white" />
+                                    Already Rated
+                                </Button>
+                            ) : (
+                                <Button
+                                    onClick={() => setRatingModalOpen(true)}
+                                    className="w-full bg-yellow-500 hover:bg-yellow-600"
+                                >
                                     <Star className="w-4 h-4 mr-2" />
                                     Rate Experience
                                 </Button>
-                            </Link>
+                            )
                         ) : (
                             <Button
                                 onClick={() => router.push(`/find-jobs/${job.id}`)}
@@ -198,6 +238,16 @@ export function JobCard({ application }: JobCardProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Rating Modal */}
+            <RatingModal
+                isOpen={ratingModalOpen}
+                onClose={() => setRatingModalOpen(false)}
+                onSubmit={handleRatingSubmit}
+                title="Rate Your Experience"
+                description="How was your experience working on this job? Your feedback helps us improve our platform."
+                isLoading={submittingRating}
+            />
         </Card>
     )
 }

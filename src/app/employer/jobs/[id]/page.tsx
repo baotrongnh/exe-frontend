@@ -12,6 +12,7 @@ import { Check } from "lucide-react"
 import { EmployerProductsSection } from "./components/EmployerProductsSection"
 import { CompleteJobModal } from "./components/CompleteJobModal"
 import { RatingModal } from "@/components/RatingModal"
+import { useToast } from "@/components/toast"
 
 // Type cho Job Detail
 interface JobDetail {
@@ -55,6 +56,7 @@ interface ApiResponse {
 export default function EmployerJobDetailPage() {
     const params = useParams()
     const jobId = params.id as string
+    const toast = useToast()
 
     const [job, setJob] = useState<JobDetail | null>(null)
     const [loading, setLoading] = useState(true)
@@ -159,7 +161,7 @@ export default function EmployerJobDetailPage() {
     // Open Complete Job Modal
     const openCompleteModal = () => {
         if (!acceptedApplication) {
-            alert('No accepted application found. You must accept an application before completing the job.');
+            toast.showToast('No accepted application found. You must accept an application before completing the job.', 'error');
             return;
         }
         setCompleteModalOpen(true);
@@ -168,7 +170,7 @@ export default function EmployerJobDetailPage() {
     // Handle Complete Job
     const handleCompleteJob = async () => {
         if (!job || !acceptedApplication) {
-            alert('Cannot complete job: No accepted application found.');
+            toast.showToast('Cannot complete job: No accepted application found.', 'error');
             return;
         }
 
@@ -184,7 +186,7 @@ export default function EmployerJobDetailPage() {
             setCompleteModalOpen(false);
 
             // Show success message
-            alert('Job has been completed successfully! Payment has been transferred to the freelancer (minus 8% platform fee).');
+            toast.showToast('Job has been completed successfully! Payment has been transferred to the freelancer (minus 8% platform fee).', 'success');
 
             // Update local state
             setJob(prev => prev ? { ...prev, status: 'completed' } : null);
@@ -195,7 +197,7 @@ export default function EmployerJobDetailPage() {
         } catch (error) {
             console.error('Error completing job:', error);
             const errorMessage = error instanceof Error ? error.message : 'Failed to complete job';
-            alert(`Failed to complete job: ${errorMessage}`);
+            toast.showToast(`Failed to complete job: ${errorMessage}`, 'error');
         } finally {
             setCompletingJob(false);
         }
@@ -210,11 +212,11 @@ export default function EmployerJobDetailPage() {
                 rating,
                 comment: comment || undefined,
             })
-            alert("Thank you for your feedback!")
+            toast.showToast("Thank you for your feedback!", "success")
             setRatingModalOpen(false)
         } catch (error) {
             console.error("Error submitting rating:", error)
-            alert("Failed to submit rating. Please try again.")
+            toast.showToast("Failed to submit rating. Please try again.", "error")
         } finally {
             setSubmittingRating(false)
         }
