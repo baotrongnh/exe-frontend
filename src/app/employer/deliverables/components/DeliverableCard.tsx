@@ -28,7 +28,7 @@ interface Deliverable {
     title: string;
     description: string;
     status: "pending" | "approved" | "rejected";
-    files: ProductFile[];
+    files: (ProductFile | string)[];
     created_at: string;
     reviewed_at?: string | null;
     rejection_reason?: string | null;
@@ -121,18 +121,28 @@ export function DeliverableCard({
                                 </span>
                             </div>
                             <div className="flex flex-wrap gap-2">
-                                {deliverable.files.map((file, index) => (
-                                    <button
-                                        key={index}
-                                        onClick={() => onDownloadFile(file.path, file.name, deliverable.id, index)}
-                                        className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 transition-colors group/file"
-                                    >
-                                        <FileText className="w-4 h-4 text-gray-500" />
-                                        <span className="font-medium">{file.name}</span>
-                                        <span className="text-xs text-gray-500">({(file.size / 1024).toFixed(1)} KB)</span>
-                                        <Download className="w-3.5 h-3.5 text-gray-400 group-hover/file:text-indigo-600 transition-colors" />
-                                    </button>
-                                ))}
+                                {deliverable.files.map((file, index) => {
+                                    const fileUrl = typeof file === 'string' ? file : file.path
+                                    const fileName = typeof file === 'string'
+                                        ? file.split('/').pop()?.split('?')[0] || `File ${index + 1}`
+                                        : file.name
+                                    const fileSize = typeof file === 'string' ? 0 : file.size
+
+                                    return (
+                                        <button
+                                            key={index}
+                                            onClick={() => onDownloadFile(fileUrl, fileName, deliverable.id, index)}
+                                            className="flex items-center gap-2 px-3 py-2 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-sm text-gray-700 transition-colors group/file"
+                                        >
+                                            <FileText className="w-4 h-4 text-gray-500" />
+                                            <span className="font-medium">{fileName}</span>
+                                            {fileSize > 0 && (
+                                                <span className="text-xs text-gray-500">({(fileSize / 1024).toFixed(1)} KB)</span>
+                                            )}
+                                            <Download className="w-3.5 h-3.5 text-gray-400 group-hover/file:text-indigo-600 transition-colors" />
+                                        </button>
+                                    )
+                                })}
                             </div>
                         </div>
                     )}
