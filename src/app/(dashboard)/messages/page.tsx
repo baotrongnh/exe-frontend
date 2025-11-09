@@ -21,7 +21,6 @@ import {
 } from "./components";
 import { VideoCallModal } from "./components/VideoCallModal";
 import { useVideoCall } from "./hooks/useVideoCall";
-import { useVideoCallSocket } from "./hooks/useVideoCallSocket";
 
 // Utility function to format relative time
 function formatRelativeTime(date: Date): string {
@@ -37,6 +36,13 @@ function formatRelativeTime(date: Date): string {
 
 interface MessagesProps {
     basePath?: string;
+}
+
+interface IncomingCallData {
+    from: string;
+    callId: string;
+    fromName: string;
+    fromAvatar?: string;
 }
 
 function MessagesContent({ basePath = "" }: MessagesProps) {
@@ -55,11 +61,12 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
     const [isLoadingMessages, setIsLoadingMessages] = useState(false)
     const [isSending, setIsSending] = useState(false)
     const [typingUsers, setTypingUsers] = useState<Set<string>>(new Set())
-    const [incomingCallData, setIncomingCallData] = useState<any>(null)
+    const [incomingCallData, setIncomingCallData] = useState<IncomingCallData | null>(null)
 
     // Initialize Socket.IO chat
     const {
         isConnected,
+        socket,
         sendMessage: socketSendMessage,
         startTyping,
         stopTyping,
@@ -178,10 +185,38 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
         }
     })
 
-    // Dummy video call hooks (if not using video call features, just define empty ones)
-    const initiateCall = (candidateId: string) => console.log('Video call not implemented', candidateId)
-    const acceptCall = (callId: string, from: string) => console.log('Video call not implemented')
-    const endCall = () => console.log('Video call not implemented')
+    // Initialize video call functionality
+    const {
+        callData,
+        localStream,
+        remoteStream,
+        isMuted,
+        isVideoOff,
+        initiateCall,
+        acceptCall: videoAcceptCall,
+        endCall: videoEndCall,
+        toggleMute,
+        toggleVideo,
+    } = useVideoCall({
+        socket,
+        isConnected,
+        currentUserId: socketCurrentUserId,
+        onIncomingCall: (data) => {
+            console.log("📞 Incoming call:", data);
+            // Find the caller's info from threads
+            const callerThread = threads.find(t => t.candidateId === data.from);
+            setIncomingCallData({
+                from: data.from,
+                callId: data.callId,
+                fromName: callerThread?.candidateName || "Unknown User",
+                fromAvatar: callerThread?.candidateAvatar,
+            });
+        },
+        onCallEnded: (data) => {
+            console.log("📞 Call ended:", data);
+            setIncomingCallData(null);
+        },
+    });
 
     // Store current values in refs to avoid dependency issues
     const socketConnectionRef = useRef({ isConnected });
@@ -436,19 +471,20 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
     const handleAcceptCall = () => {
         if (incomingCallData) {
             console.log("✅ Accepting call from", incomingCallData.from);
-            acceptCall(incomingCallData.callId, incomingCallData.from);
+            videoAcceptCall(incomingCallData.callId, incomingCallData.from);
             setIncomingCallData(null);
         }
     };
 
     const handleDeclineCall = () => {
         console.log("❌ Declining call");
+        videoEndCall();
         setIncomingCallData(null);
     };
 
     const handleEndCall = () => {
         console.log("📞 Ending call");
-        endCall();
+        videoEndCall();
         setIncomingCallData(null);
     };
 
@@ -540,6 +576,7 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
                                 candidate={selectedCandidate}
                                 threadId={selectedThreadId || ""}
                                 onViewProfile={handleViewProfile}
+                                onStartCall={handleStartCall}
                                 typingUsers={typingUsers}
                                 isSending={isSending}
                             />
@@ -568,6 +605,41 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
                     </div>
                 )}
             </div>
+
+            {/* Video Call Modal */}
+            <VideoCallModal
+                isOpen={callData.status !== "idle"}
+                callStatus={callData.status}
+                localStream={localStream}
+                remoteStream={remoteStream}
+                isMuted={isMuted}
+                isVideoOff={isVideoOff}
+                remoteName={
+                    incomingCallData?.fromName ||
+                    selectedCandidate?.name ||
+                    "Unknown User"
+                }
+                remoteAvatar={
+                    incomingCallData?.fromAvatar || selectedCandidate?.avatar
+                }
+                onClose={() => {
+                    videoEndCall();
+                    setIncomingCallData(null);
+                }}
+                onAccept={
+                    callData.status === "ringing" && incomingCallData
+                        ? handleAcceptCall
+                        : undefined
+                }
+                onDecline={
+                    callData.status === "ringing" && incomingCallData
+                        ? handleDeclineCall
+                        : undefined
+                }
+                onToggleMute={toggleMute}
+                onToggleVideo={toggleVideo}
+                onEndCall={handleEndCall}
+            />
         </div>
     );
 }

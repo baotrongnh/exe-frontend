@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "@/lib/api";
@@ -22,6 +21,36 @@ export default function PostJobPage() {
     deadline: "",
     skills_required: "",
   });
+
+  const formatNumber = (value: string) => {
+    if (!value) return "";
+    return new Intl.NumberFormat("vi-VN").format(Number(value));
+  };
+
+  const parseNumber = (formattedValue: string) => {
+    return formattedValue.replace(/\./g, "");
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+
+    if (name === "post_cost") {
+      const rawValue = parseNumber(value);
+      if (!isNaN(Number(rawValue))) {
+        setFormData({
+          ...formData,
+          [name]: rawValue,
+        });
+      }
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value,
+      });
+    }
+  };
+
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,13 +89,6 @@ export default function PostJobPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
   };
 
   return (
@@ -127,7 +149,7 @@ export default function PostJobPage() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Post Cost *</label>
-                <input type="number" name="post_cost" value={formData.post_cost} onChange={handleChange} required placeholder="e.g. 10000000" min="0" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
+                <input type="text" name="post_cost" value={formatNumber(formData.post_cost)} onChange={handleChange} required placeholder="e.g. 10,000,000" className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" />
                 <p className="text-xs text-gray-500 mt-1">Cost to post this job</p>
               </div>
 
