@@ -19,7 +19,7 @@ import type {
 
 // Tạo axios instance cho Admin API
 const adminApiClient = axios.create({
-  baseURL: API_BASE_URL,
+  baseURL: `${API_BASE_URL}/api`,
   headers: {
     "Content-Type": "application/json",
   },
