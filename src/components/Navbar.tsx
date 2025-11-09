@@ -32,9 +32,9 @@ export default function Navbar() {
           <div className="flex items-center">
             <Link href="/" className="flex items-center">
               <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center mr-3">
-                <span className="text-white font-bold text-sm">J</span>
+                <span className="text-white font-bold text-sm">S</span>
               </div>
-              <span className="text-xl font-semibold text-gray-900">JobBoost</span>
+              <span className="text-xl font-semibold text-gray-900">Sworker</span>
             </Link>
           </div>
 

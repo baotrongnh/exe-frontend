@@ -44,9 +44,9 @@ export function DashboardSidebar() {
                <div className="p-6 border-b border-border">
                     <Link href="/dashboard" className="flex items-center gap-2">
                          <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center">
-                              <span className="text-primary-foreground font-bold text-lg">J</span>
+                              <span className="text-primary-foreground font-bold text-lg">S</span>
                          </div>
-                         <span className="font-bold text-xl text-foreground">JobBoost</span>
+                         <span className="font-bold text-xl text-foreground">Sworker</span>
                     </Link>
                </div>
 

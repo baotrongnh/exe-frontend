@@ -62,6 +62,18 @@ export function VideoCallModal({
     }
   }, [remoteStream, callStatus]);
 
+  // Auto-close modal after call ends
+  useEffect(() => {
+    if (callStatus === "ended" || callStatus === "error") {
+      const timer = setTimeout(() => {
+        console.log("Auto-closing modal after call ended");
+        onClose();
+      }, 2000); // Close after 2 seconds
+
+      return () => clearTimeout(timer);
+    }
+  }, [callStatus, onClose]);
+
   if (!isOpen) return null;
 
   const initials = remoteName
@@ -71,8 +83,9 @@ export function VideoCallModal({
     .toUpperCase();
 
   const renderContent = () => {
-    // Incoming call (ringing state with onAccept)
-    if (callStatus === "ringing" && onAccept) {
+    // Incoming call (show when onAccept is available, regardless of callStatus)
+    // This handles the case where we receive a call but haven't accepted yet
+    if (onAccept && callStatus !== "connected" && callStatus !== "connecting") {
       return (
         <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-[#4640DE] to-[#6B5DD3] text-white p-8">
           <Avatar className="w-32 h-32 mb-6 border-4 border-white shadow-xl">
@@ -198,11 +211,10 @@ export function VideoCallModal({
             <Button
               onClick={onToggleMute}
               size="lg"
-              className={`w-14 h-14 rounded-full transition-all ${
-                isMuted
+              className={`w-14 h-14 rounded-full transition-all ${isMuted
                   ? "bg-red-500 hover:bg-red-600"
                   : "bg-gray-700 hover:bg-gray-600"
-              }`}
+                }`}
             >
               {isMuted ? (
                 <MicOff className="w-6 h-6" />
@@ -214,11 +226,10 @@ export function VideoCallModal({
             <Button
               onClick={onToggleVideo}
               size="lg"
-              className={`w-14 h-14 rounded-full transition-all ${
-                isVideoOff
+              className={`w-14 h-14 rounded-full transition-all ${isVideoOff
                   ? "bg-red-500 hover:bg-red-600"
                   : "bg-gray-700 hover:bg-gray-600"
-              }`}
+                }`}
             >
               {isVideoOff ? (
                 <VideoOff className="w-6 h-6" />

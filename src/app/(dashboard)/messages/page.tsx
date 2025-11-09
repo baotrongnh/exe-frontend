@@ -202,7 +202,7 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
         isConnected,
         currentUserId: socketCurrentUserId,
         onIncomingCall: (data) => {
-            console.log("📞 Incoming call:", data);
+            console.log("📞 Incoming call received:", data);
             // Find the caller's info from threads
             const callerThread = threads.find(t => t.candidateId === data.from);
             setIncomingCallData({
@@ -211,9 +211,14 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
                 fromName: callerThread?.candidateName || "Unknown User",
                 fromAvatar: callerThread?.candidateAvatar,
             });
+            console.log("📞 Incoming call data set:", {
+                from: data.from,
+                callId: data.callId,
+                fromName: callerThread?.candidateName || "Unknown User",
+            });
         },
         onCallEnded: (data) => {
-            console.log("📞 Call ended:", data);
+            console.log("📞 Call ended by remote:", data);
             setIncomingCallData(null);
         },
     });
@@ -608,7 +613,7 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
 
             {/* Video Call Modal */}
             <VideoCallModal
-                isOpen={callData.status !== "idle"}
+                isOpen={callData.status !== "idle" || incomingCallData !== null}
                 callStatus={callData.status}
                 localStream={localStream}
                 remoteStream={remoteStream}
@@ -623,18 +628,23 @@ function MessagesContent({ basePath = "" }: MessagesProps) {
                     incomingCallData?.fromAvatar || selectedCandidate?.avatar
                 }
                 onClose={() => {
+                    console.log("🚪 Closing video call modal");
                     videoEndCall();
                     setIncomingCallData(null);
                 }}
                 onAccept={
                     callData.status === "ringing" && incomingCallData
                         ? handleAcceptCall
-                        : undefined
+                        : incomingCallData
+                            ? handleAcceptCall
+                            : undefined
                 }
                 onDecline={
                     callData.status === "ringing" && incomingCallData
                         ? handleDeclineCall
-                        : undefined
+                        : incomingCallData
+                            ? handleDeclineCall
+                            : undefined
                 }
                 onToggleMute={toggleMute}
                 onToggleVideo={toggleVideo}

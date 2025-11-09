@@ -181,7 +181,7 @@ export function AdminSidebar() {
             </svg>
           </div>
           <div>
-            <div className="font-bold text-gray-900">JobBoost</div>
+            <div className="font-bold text-gray-900">Sworker</div>
             <div className="text-xs text-gray-500">Admin Panel</div>
           </div>
         </div>
@@ -222,7 +222,7 @@ export function AdminSidebar() {
               Admin User
             </div>
             <div className="text-xs text-gray-500 truncate">
-              admin@jobboost.com
+              admin@sworker.com
             </div>
           </div>
         </div>

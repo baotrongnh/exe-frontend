@@ -61,7 +61,7 @@ const ICE_SERVERS = {
 };
 
 export function useVideoCall(options: UseVideoCallOptions) {
-  const { socket, isConnected, currentUserId, onIncomingCall, onCallEnded } =
+  const { socket, isConnected, onIncomingCall, onCallEnded } =
     options;
 
   const [callData, setCallData] = useState<CallData>({
@@ -226,17 +226,18 @@ export function useVideoCall(options: UseVideoCallOptions) {
       localStreamRef.current = stream;
       setLocalStream(stream);
       return stream;
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error(
         "❌ Error accessing media devices:",
-        error.name,
-        error.message
+        error instanceof Error ? error.name : "Unknown",
+        error instanceof Error ? error.message : String(error)
       );
 
       // If video fails, try audio only
       if (
-        error.name === "NotReadableError" ||
-        error.name === "NotAllowedError"
+        error instanceof Error &&
+        (error.name === "NotReadableError" ||
+          error.name === "NotAllowedError")
       ) {
         console.warn("Camera not available, trying audio only...");
         try {
@@ -247,11 +248,11 @@ export function useVideoCall(options: UseVideoCallOptions) {
           localStreamRef.current = audioStream;
           setLocalStream(audioStream);
           return audioStream;
-        } catch (audioError: any) {
+        } catch (audioError: unknown) {
           console.error(
             "Failed to get audio:",
-            audioError.name,
-            audioError.message
+            audioError instanceof Error ? audioError.name : "Unknown",
+            audioError instanceof Error ? audioError.message : String(audioError)
           );
           setCallData((prev) => ({
             ...prev,
@@ -445,6 +446,15 @@ export function useVideoCall(options: UseVideoCallOptions) {
       callId: string;
       room_name?: string;
     }) => {
+      console.log("📞 Incoming call event received:", data);
+      // Set call status to ringing so the modal shows
+      setCallData({
+        callId: data.callId,
+        remoteUserId: data.from,
+        status: "ringing",
+        error: null,
+      });
+      // Trigger the callback
       callbacksRef.current.onIncomingCall?.(data);
     };
 
@@ -620,7 +630,7 @@ export function useVideoCall(options: UseVideoCallOptions) {
       socket.off("webrtc:ice-candidate", handleIceCandidate);
       socket.off("webrtc:end-call", handleEndCall);
     };
-  }, [socket, isConnected, createPeerConnection, endCall]);
+  }, [socket, isConnected, createPeerConnection, endCall, getUserMedia]);
 
   // Cleanup on unmount
   useEffect(() => {

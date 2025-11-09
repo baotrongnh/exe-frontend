@@ -2,7 +2,7 @@
 
 ## Tổng quan
 
-Tích hợp API Dashboard Admin cho hệ thống JobBoost với các tính năng:
+Tích hợp API Dashboard Admin cho hệ thống Sworker với các tính năng:
 
 - ✅ Dashboard Overview (Tổng quan hệ thống)
 - ✅ Revenue Management (Quản lý doanh thu)
@@ -61,8 +61,7 @@ const ADMIN_API_BASE_URL = "http://localhost:5000";
 3. **Environment Variable** (Recommended):
 
    ```typescript
-   const ADMIN_API_BASE_URL =
-     process.env.NEXT_PUBLIC_ADMIN_API_URL || "http://localhost:5000";
+   const ADMIN_API_BASE_URL = process.env.NEXT_PUBLIC_ADMIN_API_URL || "http://localhost:5000";
    ```
 
    Thêm vào `.env.local`:

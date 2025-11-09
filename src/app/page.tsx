@@ -507,9 +507,9 @@ export default function LandingPage() {
             <div>
               <div className="flex items-center space-x-2 mb-4">
                 <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">J</span>
+                  <span className="text-white font-bold text-sm">S</span>
                 </div>
-                <span className="text-xl font-bold">JobBoost</span>
+                <span className="text-xl font-bold">Sworker</span>
               </div>
               <p className="text-gray-400 text-sm">
                 Great platform for the job seeker that passionate about startups. Find your dream job easier.
@@ -575,7 +575,7 @@ export default function LandingPage() {
           </div>
 
           <div className="border-t border-gray-800 pt-8 flex flex-col md:flex-row justify-between items-center">
-            <p className="text-gray-400 text-sm mb-4 md:mb-0">2024 © JobBoost. All rights reserved.</p>
+            <p className="text-gray-400 text-sm mb-4 md:mb-0">2024 © Sworker. All rights reserved.</p>
             <div className="flex space-x-4">
               {["facebook", "instagram", "dribbble", "linkedin", "twitter"].map((social) => (
                 <button
