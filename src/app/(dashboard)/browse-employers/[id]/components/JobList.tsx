@@ -11,8 +11,7 @@ interface Job {
     description: string
     job_type: "FREELANCE" | "PART_TIME" | "PROJECT" | "FULL_TIME"
     budget_type: "FIXED" | "HOURLY"
-    budget_min: string
-    budget_max: string
+    post_cost: string
     currency: string
     experience_level: "INTERN" | "JUNIOR" | "MIDDLE" | "SENIOR"
     deadline: string | null
@@ -51,18 +50,16 @@ export function JobList({ jobs, onApply, applyingJobId, appliedJobs }: JobListPr
     }
 
     const formatBudget = (job: Job) => {
-        const min = parseFloat(job.budget_min)
-        const max = parseFloat(job.budget_max)
+        const cost = parseFloat(job.post_cost)
 
-        // Handle case where budget_min/max are not provided (NaN)
-        if (isNaN(min) || isNaN(max)) {
-            return "Budget not specified"
+        if (isNaN(cost) || cost === 0) {
+            return "Contact for price"
         }
 
         if (job.currency === "VND") {
-            return `${(min / 1000000).toFixed(1)}tr - ${(max / 1000000).toFixed(1)}tr VNĐ`
+            return `${(cost / 1000000).toFixed(1)}tr VNĐ`
         }
-        return `$${min} - $${max}`
+        return `$${cost.toFixed(2)}`
     }
 
     if (jobs.length === 0) {

@@ -14,8 +14,7 @@ interface JobPost {
      image_url: string | null
      job_type: string
      budget_type: string
-     budget_min: string
-     budget_max: string
+     post_cost: string
      currency: string
      experience_level: string
      deadline: string | null
@@ -40,8 +39,7 @@ interface JobPostDisplay {
      postedDate: string
      description: string
      tags: string[]
-     budget_min: string
-     budget_max: string
+     post_cost: string
      currency: string
 }
 
@@ -58,16 +56,17 @@ export default function JobApprovalsPage() {
      }, [])
 
      const transformJobData = (job: JobPost): JobPostDisplay => {
-          // Format salary
-          const min = parseFloat(job.budget_min)
-          const max = parseFloat(job.budget_max)
+          // Format salary from post_cost
+          const cost = parseFloat(job.post_cost)
 
-          // Handle case where budget_min/max are not provided (NaN)
-          let salary = "Budget not specified"
-          if (!isNaN(min) && !isNaN(max)) {
-               const salaryMin = min.toLocaleString()
-               const salaryMax = max.toLocaleString()
-               salary = `${salaryMin} - ${salaryMax} ${job.currency}`
+          // Handle case where post_cost is not provided (NaN or 0)
+          let salary = "Contact for price"
+          if (!isNaN(cost) && cost > 0) {
+               if (job.currency === "VND") {
+                    salary = `${(cost / 1000000).toFixed(1)}tr VNĐ`
+               } else {
+                    salary = `$${cost.toFixed(2)}`
+               }
           }
 
           // Get company logo (first letter of owner_id for now, or could fetch from employer profile)
@@ -92,8 +91,7 @@ export default function JobApprovalsPage() {
                postedDate: postedDate,
                description: job.description,
                tags: job.skills_required,
-               budget_min: job.budget_min,
-               budget_max: job.budget_max,
+               post_cost: job.post_cost,
                currency: job.currency
           }
      }

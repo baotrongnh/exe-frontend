@@ -14,8 +14,7 @@ interface Job {
   description: string;
   job_type: "FREELANCE" | "PART_TIME" | "PROJECT" | "FULL_TIME";
   budget_type: "FIXED" | "HOURLY";
-  budget_min: string;
-  budget_max: string;
+  post_cost: string;
   currency: string;
   experience_level: "INTERN" | "JUNIOR" | "MIDDLE" | "SENIOR";
   deadline: string | null;
