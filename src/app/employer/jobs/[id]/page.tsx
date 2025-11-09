@@ -22,8 +22,7 @@ interface JobDetail {
     description: string
     job_type: 'FREELANCE' | 'PART_TIME' | 'PROJECT' | 'FULL_TIME'
     budget_type: 'FIXED' | 'HOURLY'
-    budget_min: string
-    budget_max: string
+    post_cost: string
     currency: string
     experience_level: 'INTERN' | 'JUNIOR' | 'MIDDLE' | 'SENIOR'
     deadline: string | null
@@ -140,18 +139,17 @@ export default function EmployerJobDetailPage() {
     }
 
     const formatBudget = (job: JobDetail) => {
-        const min = parseFloat(job.budget_min)
-        const max = parseFloat(job.budget_max)
+        const cost = parseFloat(job.post_cost)
 
-        // Handle case where budget_min/max are not provided (NaN)
-        if (isNaN(min) || isNaN(max)) {
-            return "Budget not specified"
+        // Handle case where post_cost is not provided (NaN or 0)
+        if (isNaN(cost) || cost === 0) {
+            return "Contact for price"
         }
 
         if (job.currency === "VND") {
-            return `${(min / 1000000).toFixed(1)}M - ${(max / 1000000).toFixed(1)}M VNĐ`
+            return `${(cost / 1000000).toFixed(1)}tr VNĐ`
         }
-        return `$${min} - $${max}`
+        return `$${cost.toFixed(2)}`
     }
 
     const getInitials = (title: string) => {
@@ -498,26 +496,12 @@ export default function EmployerJobDetailPage() {
 
                             {/* Budget Details */}
                             <Card className="p-6 shadow-lg border-gray-200">
-                                <h3 className="text-lg font-bold text-gray-900 mb-4">Budget Range</h3>
+                                <h3 className="text-lg font-bold text-gray-900 mb-4">Job Budget</h3>
                                 <div className="space-y-3">
                                     <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">Minimum</span>
+                                        <span className="text-sm text-gray-600">Post Cost</span>
                                         <span className="text-sm font-semibold text-gray-900">
-                                            {!isNaN(parseFloat(job.budget_min)) ? (
-                                                job.currency === 'VND'
-                                                    ? `${(parseFloat(job.budget_min) / 1000000).toFixed(1)}M VNĐ`
-                                                    : `$${parseFloat(job.budget_min)}`
-                                            ) : 'Not specified'}
-                                        </span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                        <span className="text-sm text-gray-600">Maximum</span>
-                                        <span className="text-sm font-semibold text-gray-900">
-                                            {!isNaN(parseFloat(job.budget_max)) ? (
-                                                job.currency === 'VND'
-                                                    ? `${(parseFloat(job.budget_max) / 1000000).toFixed(1)}M VNĐ`
-                                                    : `$${parseFloat(job.budget_max)}`
-                                            ) : 'Not specified'}
+                                            {formatBudget(job)}
                                         </span>
                                     </div>
                                     <div className="flex justify-between pt-3 border-t border-gray-200">

@@ -252,14 +252,14 @@ export default function MyCV() {
 
                             {/* Action Buttons */}
                             <div className="flex flex-wrap gap-3">
-                                <Button
+                                {/* <Button
                                     onClick={() => setIsViewModalOpen(true)}
                                     className="flex-1 sm:flex-none"
                                     variant="outline"
                                 >
                                     <Eye className="w-4 h-4 mr-2" />
                                     View Full CV
-                                </Button>
+                                </Button> */}
                                 <Button
                                     onClick={handleDownloadCV}
                                     className="flex-1 sm:flex-none"
