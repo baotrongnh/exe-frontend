@@ -3,13 +3,66 @@
 import React, { useState, useEffect } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Star, User, MessageSquare, Calendar, Hash, CheckCircle, XCircle, TrendingUp } from 'lucide-react'
-import { adminDashboardApi } from '@/lib/admin-dashboard-api'
-import type { Review, ReviewsData } from '@/types/admin'
+import { Star, User, MessageSquare, Calendar, CheckCircle, TrendingUp, Briefcase } from 'lucide-react'
+import { api } from '@/lib/api'
 import { BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 
 // Chart Colors
 const COLORS = ['#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#3b82f6']
+
+// Types
+interface Reviewer {
+    id: string
+    email: string
+    name: string
+}
+
+interface Job {
+    id: string
+    title: string
+    status: string
+}
+
+interface Review {
+    id: string
+    job_id: string
+    employer_id: string
+    freelancer_id: string
+    reviewer_id: string
+    reviewer_role: 'FREELANCER' | 'EMPLOYER'
+    rating: number
+    comment: string
+    created_at: string
+    updated_at: string
+    reviewer: Reviewer
+    employer: Reviewer
+    freelancer: Reviewer
+    job: Job
+}
+
+interface RatingDistribution {
+    rating: number
+    count: string
+}
+
+interface Statistics {
+    average_rating: string
+    total_reviews: number
+    rating_distribution: RatingDistribution[]
+}
+
+interface Pagination {
+    page: number
+    limit: number
+    total: number
+    totalPages: number
+}
+
+interface ReviewsData {
+    reviews: Review[]
+    statistics: Statistics
+    pagination: Pagination
+}
 
 // Star Rating Component
 const StarRating = ({ rating }: { rating: number }) => (
@@ -26,7 +79,6 @@ export default function ReviewsPage() {
     const [reviewsData, setReviewsData] = useState<ReviewsData | null>(null)
     const [filteredReviews, setFilteredReviews] = useState<Review[]>([])
     const [loading, setLoading] = useState(true)
-    const [error, setError] = useState<string | null>(null)
     const [searchTerm, setSearchTerm] = useState('')
     const [roleFilter, setRoleFilter] = useState<'all' | 'FREELANCER' | 'EMPLOYER'>('all')
     const [verifiedFilter, setVerifiedFilter] = useState<'all' | 'verified' | 'unverified'>('all')
@@ -41,13 +93,12 @@ export default function ReviewsPage() {
     const fetchReviews = async () => {
         try {
             setLoading(true)
-            setError(null)
-            const response = await adminDashboardApi.getReviews({ page: 1, limit: 100 })
+            const response = await api.jobReviews.getAllAdmin({ page: 1, limit: 100 })
             setReviewsData(response.data)
             setFilteredReviews(response.data.reviews)
         } catch (err: unknown) {
             console.error('Error fetching reviews:', err)
-            setError('Failed to load reviews. Please try again.')
+            alert('Failed to load reviews. Please try again.')
         } finally {
             setLoading(false)
         }
@@ -61,22 +112,23 @@ export default function ReviewsPage() {
 
         // Apply role filter
         if (roleFilter !== 'all') {
-            filtered = filtered.filter(review => review.user_role === roleFilter)
+            filtered = filtered.filter(review => review.reviewer_role === roleFilter)
         }
 
-        // Apply verified filter
-        if (verifiedFilter === 'verified') {
-            filtered = filtered.filter(review => review.is_verified)
-        } else if (verifiedFilter === 'unverified') {
-            filtered = filtered.filter(review => !review.is_verified)
-        }
+        // Apply verified filter (note: the API doesn't return is_verified, so we'll skip this)
+        // if (verifiedFilter === 'verified') {
+        //     filtered = filtered.filter(review => review.is_verified)
+        // } else if (verifiedFilter === 'unverified') {
+        //     filtered = filtered.filter(review => !review.is_verified)
+        // }
 
         // Apply search filter
         if (searchTerm) {
             filtered = filtered.filter(review =>
-                review.reviewer.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                review.reviewer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                 review.reviewer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.comment.toLowerCase().includes(searchTerm.toLowerCase())
+                review.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                review.job.title.toLowerCase().includes(searchTerm.toLowerCase())
             )
         }
 
@@ -102,16 +154,19 @@ export default function ReviewsPage() {
     const getRatingDistributionData = () =>
         reviewsData?.statistics.rating_distribution.map(item => ({ rating: `${item.rating} ⭐`, count: parseInt(item.count) })) || []
 
-    const getRoleDistributionData = () => reviewsData ? [
-        { name: 'Freelancer', value: reviewsData.statistics.freelancer_review_count },
-        { name: 'Employer', value: reviewsData.statistics.employer_review_count }
-    ] : []
+    const getRoleDistributionData = () => {
+        if (!reviewsData) return []
+        const freelancerCount = reviewsData.reviews.filter(r => r.reviewer_role === 'FREELANCER').length
+        const employerCount = reviewsData.reviews.filter(r => r.reviewer_role === 'EMPLOYER').length
+        return [
+            { name: 'Freelancer', value: freelancerCount },
+            { name: 'Employer', value: employerCount }
+        ]
+    }
 
     const getVerificationData = () => {
-        if (!reviewsData) return []
-        const verified = reviewsData.reviews.filter(r => r.is_verified).length
-        const unverified = reviewsData.reviews.length - verified
-        return [{ name: 'Verified', value: verified }, { name: 'Unverified', value: unverified }]
+        // Since API doesn't return is_verified, we'll show role distribution instead
+        return getRoleDistributionData()
     }
 
 
@@ -158,14 +213,18 @@ export default function ReviewsPage() {
                                 <h3 className="text-sm font-medium text-gray-600">Freelancer Reviews</h3>
                                 <User className="w-5 h-5 text-purple-500" />
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">{reviewsData.statistics.freelancer_review_count}</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                {reviewsData.reviews.filter(r => r.reviewer_role === 'FREELANCER').length}
+                            </p>
                         </div>
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="text-sm font-medium text-gray-600">Employer Reviews</h3>
                                 <User className="w-5 h-5 text-pink-500" />
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">{reviewsData.statistics.employer_review_count}</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                {reviewsData.reviews.filter(r => r.reviewer_role === 'EMPLOYER').length}
+                            </p>
                         </div>
                     </div>
 
@@ -194,7 +253,7 @@ export default function ReviewsPage() {
                             <ResponsiveContainer width="100%" height={250}>
                                 <PieChart>
                                     <Pie data={getRoleDistributionData()} cx="50%" cy="50%" labelLine={false}
-                                        label={(entry: any) => `${entry.name} ${(entry.percent * 100).toFixed(0)}%`}
+                                        label={((entry: { name?: string; percent?: number }) => `${entry.name} ${((entry.percent || 0) * 100).toFixed(0)}%`) as never}
                                         outerRadius={80} dataKey="value">
                                         {getRoleDistributionData().map((_, index) => (
                                             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -207,7 +266,7 @@ export default function ReviewsPage() {
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
                                 <CheckCircle className="w-5 h-5 text-green-500" />
-                                Verification Status
+                                Role Distribution
                             </h3>
                             <ResponsiveContainer width="100%" height={250}>
                                 <BarChart data={getVerificationData()}>
@@ -251,7 +310,7 @@ export default function ReviewsPage() {
                     </div>
 
                     {/* Verified Filter */}
-                    <div className="w-full md:w-48">
+                    <div className="w-full md:w-48" style={{ display: 'none' }}>
                         <select
                             value={verifiedFilter}
                             onChange={(e) => setVerifiedFilter(e.target.value as typeof verifiedFilter)}
@@ -300,6 +359,12 @@ export default function ReviewsPage() {
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                             <div className="flex items-center gap-1.5">
+                                                <Briefcase className="w-4 h-4" />
+                                                Job
+                                            </div>
+                                        </th>
+                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                            <div className="flex items-center gap-1.5">
                                                 <Star className="w-4 h-4" />
                                                 Rating
                                             </div>
@@ -308,12 +373,6 @@ export default function ReviewsPage() {
                                             <div className="flex items-center gap-1.5">
                                                 <MessageSquare className="w-4 h-4" />
                                                 Comment
-                                            </div>
-                                        </th>
-                                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                            <div className="flex items-center gap-1.5">
-                                                <CheckCircle className="w-4 h-4" />
-                                                Status
                                             </div>
                                         </th>
                                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -330,15 +389,21 @@ export default function ReviewsPage() {
                                             <td className="px-4 py-4">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-medium text-gray-900">{review.reviewer.full_name}</span>
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${review.user_role === 'FREELANCER'
+                                                        <span className="text-sm font-medium text-gray-900">{review.reviewer.name}</span>
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${review.reviewer_role === 'FREELANCER'
                                                             ? 'bg-blue-100 text-blue-800'
                                                             : 'bg-purple-100 text-purple-800'
                                                             }`}>
-                                                            {review.user_role}
+                                                            {review.reviewer_role}
                                                         </span>
                                                     </div>
                                                     <span className="text-xs text-gray-500">{review.reviewer.email}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-4 py-4">
+                                                <div className="flex flex-col gap-1">
+                                                    <span className="text-sm font-medium text-gray-900">{truncateText(review.job.title, 40)}</span>
+                                                    <span className="text-xs text-gray-500">ID: {review.job_id.substring(0, 8)}...</span>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
@@ -348,18 +413,6 @@ export default function ReviewsPage() {
                                                 <span title={review.comment}>
                                                     {truncateText(review.comment, 100)}
                                                 </span>
-                                            </td>
-                                            <td className="px-4 py-4 whitespace-nowrap">
-                                                <div className="flex items-center gap-2">
-                                                    {review.is_verified ? (
-                                                        <CheckCircle className="w-4 h-4 text-green-500" />
-                                                    ) : (
-                                                        <XCircle className="w-4 h-4 text-gray-400" />
-                                                    )}
-                                                    <span className={`text-sm ${review.is_verified ? 'text-green-700 font-medium' : 'text-gray-500'}`}>
-                                                        {review.is_verified ? 'Verified' : 'Not Verified'}
-                                                    </span>
-                                                </div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
                                                 {formatDate(review.created_at)}

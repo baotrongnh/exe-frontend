@@ -803,6 +803,70 @@ export const api = {
       return response.data;
     },
   },
+
+  // Job Reviews APIs
+  jobReviews: {
+    // Create a job review
+    create: async (data: {
+      job_id: string;
+      rating: number;
+      comment?: string;
+    }) => {
+      const response = await apiClient.post("/api/job-reviews", data);
+      return response.data;
+    },
+
+    // Get reviews for a specific job
+    getByJob: async (jobId: string) => {
+      const response = await apiClient.get(`/api/job-reviews/job/${jobId}`);
+      return response.data;
+    },
+
+    // Get reviews by a user
+    getByUser: async (userId: string, role?: "freelancer" | "employer") => {
+      const params = role ? { role } : {};
+      const response = await apiClient.get(`/api/job-reviews/user/${userId}`, {
+        params,
+      });
+      return response.data;
+    },
+
+    // Update a review
+    update: async (
+      id: string,
+      data: {
+        rating?: number;
+        comment?: string;
+      }
+    ) => {
+      const response = await apiClient.put(`/api/job-reviews/${id}`, data);
+      return response.data;
+    },
+
+    // Delete a review
+    delete: async (id: string) => {
+      const response = await apiClient.delete(`/api/job-reviews/${id}`);
+      return response.data;
+    },
+
+    // Admin: Get all reviews with filters
+    getAllAdmin: async (params?: {
+      page?: number;
+      limit?: number;
+      rating?: number;
+      reviewer_role?: "FREELANCER" | "EMPLOYER";
+      job_id?: string;
+      startDate?: string;
+      endDate?: string;
+      sortBy?: string;
+      sortOrder?: "ASC" | "DESC";
+    }) => {
+      const response = await apiClient.get("/api/admin/job-reviews", {
+        params,
+      });
+      return response.data;
+    },
+  },
 };
 // Export apiClient cho trường hợp muốn custom call
 export default apiClient;
