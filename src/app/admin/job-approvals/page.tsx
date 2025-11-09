@@ -59,9 +59,16 @@ export default function JobApprovalsPage() {
 
      const transformJobData = (job: JobPost): JobPostDisplay => {
           // Format salary
-          const salaryMin = parseFloat(job.budget_min).toLocaleString()
-          const salaryMax = parseFloat(job.budget_max).toLocaleString()
-          const salary = `${salaryMin} - ${salaryMax} ${job.currency}`
+          const min = parseFloat(job.budget_min)
+          const max = parseFloat(job.budget_max)
+
+          // Handle case where budget_min/max are not provided (NaN)
+          let salary = "Budget not specified"
+          if (!isNaN(min) && !isNaN(max)) {
+               const salaryMin = min.toLocaleString()
+               const salaryMax = max.toLocaleString()
+               salary = `${salaryMin} - ${salaryMax} ${job.currency}`
+          }
 
           // Get company logo (first letter of owner_id for now, or could fetch from employer profile)
           const companyLogo = job.title.charAt(0).toUpperCase()

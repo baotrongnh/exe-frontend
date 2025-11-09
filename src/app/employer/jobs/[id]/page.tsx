@@ -143,7 +143,12 @@ export default function EmployerJobDetailPage() {
         const min = parseFloat(job.budget_min)
         const max = parseFloat(job.budget_max)
 
-        if (job.currency === 'VND') {
+        // Handle case where budget_min/max are not provided (NaN)
+        if (isNaN(min) || isNaN(max)) {
+            return "Budget not specified"
+        }
+
+        if (job.currency === "VND") {
             return `${(min / 1000000).toFixed(1)}M - ${(max / 1000000).toFixed(1)}M VNĐ`
         }
         return `$${min} - $${max}`
@@ -498,19 +503,21 @@ export default function EmployerJobDetailPage() {
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-600">Minimum</span>
                                         <span className="text-sm font-semibold text-gray-900">
-                                            {job.currency === 'VND'
-                                                ? `${(parseFloat(job.budget_min) / 1000000).toFixed(1)}M VNĐ`
-                                                : `$${parseFloat(job.budget_min)}`
-                                            }
+                                            {!isNaN(parseFloat(job.budget_min)) ? (
+                                                job.currency === 'VND'
+                                                    ? `${(parseFloat(job.budget_min) / 1000000).toFixed(1)}M VNĐ`
+                                                    : `$${parseFloat(job.budget_min)}`
+                                            ) : 'Not specified'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between">
                                         <span className="text-sm text-gray-600">Maximum</span>
                                         <span className="text-sm font-semibold text-gray-900">
-                                            {job.currency === 'VND'
-                                                ? `${(parseFloat(job.budget_max) / 1000000).toFixed(1)}M VNĐ`
-                                                : `$${parseFloat(job.budget_max)}`
-                                            }
+                                            {!isNaN(parseFloat(job.budget_max)) ? (
+                                                job.currency === 'VND'
+                                                    ? `${(parseFloat(job.budget_max) / 1000000).toFixed(1)}M VNĐ`
+                                                    : `$${parseFloat(job.budget_max)}`
+                                            ) : 'Not specified'}
                                         </span>
                                     </div>
                                     <div className="flex justify-between pt-3 border-t border-gray-200">

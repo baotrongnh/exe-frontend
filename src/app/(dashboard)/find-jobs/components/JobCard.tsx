@@ -58,6 +58,11 @@ export function JobCard({ job, searchQuery, onApply, isApplying, isApplied }: Jo
         const min = parseFloat(job.budget_min)
         const max = parseFloat(job.budget_max)
 
+        // Handle case where budget_min/max are not provided (NaN)
+        if (isNaN(min) || isNaN(max)) {
+            return "Budget not specified"
+        }
+
         if (job.currency === "VND") {
             return `${(min / 1000000).toFixed(1)}tr - ${(max / 1000000).toFixed(1)}tr VNĐ`
         }
