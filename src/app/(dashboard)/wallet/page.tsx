@@ -53,7 +53,7 @@ export default function WalletPage() {
             setTotalPages(total)
 
             console.log("✅ Transactions loaded:", validTransactions.length, "items", JSON.stringify(validTransactions[0], null, 2))
-            console.log("📋 First transaction details:", transactionsList)
+            console.log("📋 First transaction details:", validTransactions)
         } catch (error: unknown) {
             const err = error as { response?: { status?: number; statusText?: string; data?: unknown }; message?: string }
             console.error("❌ Error fetching transactions:", error)
