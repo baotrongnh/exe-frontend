@@ -94,10 +94,22 @@ export default function ReviewsPage() {
         try {
             setLoading(true)
             const response = await api.jobReviews.getAllAdmin({ page: 1, limit: 100 })
-            setReviewsData(response.data)
-            setFilteredReviews(response.data.reviews)
+            console.log('Admin reviews response:', response)
+
+            // Handle the response structure
+            if (response.success && response.data) {
+                setReviewsData(response.data)
+                setFilteredReviews(response.data.reviews || [])
+            } else {
+                console.error('Invalid response structure:', response)
+                setReviewsData(null)
+                setFilteredReviews([])
+                alert('No reviews data available.')
+            }
         } catch (err: unknown) {
             console.error('Error fetching reviews:', err)
+            setReviewsData(null)
+            setFilteredReviews([])
             alert('Failed to load reviews. Please try again.')
         } finally {
             setLoading(false)
@@ -106,29 +118,22 @@ export default function ReviewsPage() {
 
     // Filter and Search Logic
     useEffect(() => {
-        if (!reviewsData) return
+        if (!reviewsData || !reviewsData.reviews) return
 
-        let filtered = reviewsData.reviews
+        let filtered = [...reviewsData.reviews]
 
         // Apply role filter
         if (roleFilter !== 'all') {
             filtered = filtered.filter(review => review.reviewer_role === roleFilter)
         }
 
-        // Apply verified filter (note: the API doesn't return is_verified, so we'll skip this)
-        // if (verifiedFilter === 'verified') {
-        //     filtered = filtered.filter(review => review.is_verified)
-        // } else if (verifiedFilter === 'unverified') {
-        //     filtered = filtered.filter(review => !review.is_verified)
-        // }
-
         // Apply search filter
         if (searchTerm) {
             filtered = filtered.filter(review =>
-                review.reviewer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.reviewer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.comment.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                review.job.title.toLowerCase().includes(searchTerm.toLowerCase())
+                review.reviewer?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                review.reviewer?.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                review.comment?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                review.job?.title?.toLowerCase().includes(searchTerm.toLowerCase())
             )
         }
 
@@ -151,11 +156,16 @@ export default function ReviewsPage() {
         text.length <= maxLength ? text : text.substring(0, maxLength) + '...'
 
     // Chart data helpers
-    const getRatingDistributionData = () =>
-        reviewsData?.statistics.rating_distribution.map(item => ({ rating: `${item.rating} ⭐`, count: parseInt(item.count) })) || []
+    const getRatingDistributionData = () => {
+        if (!reviewsData?.statistics?.rating_distribution) return []
+        return reviewsData.statistics.rating_distribution.map(item => ({
+            rating: `${item.rating} ⭐`,
+            count: parseInt(item.count)
+        }))
+    }
 
     const getRoleDistributionData = () => {
-        if (!reviewsData) return []
+        if (!reviewsData?.reviews) return []
         const freelancerCount = reviewsData.reviews.filter(r => r.reviewer_role === 'FREELANCER').length
         const employerCount = reviewsData.reviews.filter(r => r.reviewer_role === 'EMPLOYER').length
         return [
@@ -191,7 +201,7 @@ export default function ReviewsPage() {
             </div>
 
             {/* Statistics Cards */}
-            {reviewsData && !loading && (
+            {reviewsData && reviewsData.statistics && !loading && (
                 <>
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -199,14 +209,16 @@ export default function ReviewsPage() {
                                 <h3 className="text-sm font-medium text-gray-600">Total Reviews</h3>
                                 <MessageSquare className="w-5 h-5 text-blue-500" />
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">{reviewsData.pagination.total}</p>
+                            <p className="text-2xl font-bold text-gray-900">{reviewsData.pagination?.total || 0}</p>
                         </div>
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <div className="flex items-center justify-between mb-2">
                                 <h3 className="text-sm font-medium text-gray-600">Average Rating</h3>
                                 <Star className="w-5 h-5 text-yellow-500" />
                             </div>
-                            <p className="text-2xl font-bold text-gray-900">{parseFloat(reviewsData.statistics.average_rating).toFixed(1)} ⭐</p>
+                            <p className="text-2xl font-bold text-gray-900">
+                                {reviewsData.statistics.average_rating ? parseFloat(reviewsData.statistics.average_rating).toFixed(1) : '0.0'} ⭐
+                            </p>
                         </div>
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
                             <div className="flex items-center justify-between mb-2">
@@ -214,7 +226,7 @@ export default function ReviewsPage() {
                                 <User className="w-5 h-5 text-purple-500" />
                             </div>
                             <p className="text-2xl font-bold text-gray-900">
-                                {reviewsData.reviews.filter(r => r.reviewer_role === 'FREELANCER').length}
+                                {reviewsData.reviews?.filter(r => r.reviewer_role === 'FREELANCER').length || 0}
                             </p>
                         </div>
                         <div className="bg-white rounded-lg border border-gray-200 p-6">
@@ -223,7 +235,7 @@ export default function ReviewsPage() {
                                 <User className="w-5 h-5 text-pink-500" />
                             </div>
                             <p className="text-2xl font-bold text-gray-900">
-                                {reviewsData.reviews.filter(r => r.reviewer_role === 'EMPLOYER').length}
+                                {reviewsData.reviews?.filter(r => r.reviewer_role === 'EMPLOYER').length || 0}
                             </p>
                         </div>
                     </div>
@@ -389,7 +401,9 @@ export default function ReviewsPage() {
                                             <td className="px-4 py-4">
                                                 <div className="flex flex-col gap-1">
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-medium text-gray-900">{review.reviewer.name}</span>
+                                                        <span className="text-sm font-medium text-gray-900">
+                                                            {review.reviewer?.name || 'Unknown'}
+                                                        </span>
                                                         <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${review.reviewer_role === 'FREELANCER'
                                                             ? 'bg-blue-100 text-blue-800'
                                                             : 'bg-purple-100 text-purple-800'
@@ -397,21 +411,27 @@ export default function ReviewsPage() {
                                                             {review.reviewer_role}
                                                         </span>
                                                     </div>
-                                                    <span className="text-xs text-gray-500">{review.reviewer.email}</span>
+                                                    <span className="text-xs text-gray-500">
+                                                        {review.reviewer?.email || 'N/A'}
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4">
                                                 <div className="flex flex-col gap-1">
-                                                    <span className="text-sm font-medium text-gray-900">{truncateText(review.job.title, 40)}</span>
-                                                    <span className="text-xs text-gray-500">ID: {review.job_id.substring(0, 8)}...</span>
+                                                    <span className="text-sm font-medium text-gray-900">
+                                                        {truncateText(review.job?.title || 'N/A', 40)}
+                                                    </span>
+                                                    <span className="text-xs text-gray-500">
+                                                        ID: {review.job_id?.substring(0, 8)}...
+                                                    </span>
                                                 </div>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap">
                                                 <StarRating rating={review.rating} />
                                             </td>
                                             <td className="px-4 py-4 text-sm text-gray-600 max-w-xs">
-                                                <span title={review.comment}>
-                                                    {truncateText(review.comment, 100)}
+                                                <span title={review.comment || ''}>
+                                                    {truncateText(review.comment || 'No comment', 100)}
                                                 </span>
                                             </td>
                                             <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-600">
