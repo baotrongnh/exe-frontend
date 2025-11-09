@@ -558,8 +558,15 @@ export function useVideoCall(options: UseVideoCallOptions) {
           callId: data.callId,
         }));
 
-        await new Promise((resolve) => setTimeout(resolve, 50));
+        // Ensure we have local stream before creating peer connection
+        if (!localStreamRef.current) {
+          console.log("⚠️ No local stream when receiving offer, getting user media...");
+          await getUserMedia();
+        }
 
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        console.log("🔧 Creating peer connection...");
         const pc = createPeerConnection(data.from, data.callId);
         console.log("🔧 Setting remote description (offer)...");
         await pc.setRemoteDescription(new RTCSessionDescription(data.sdp));
@@ -577,7 +584,9 @@ export function useVideoCall(options: UseVideoCallOptions) {
           callId: data.callId,
         });
 
-        setCallData((prev) => ({ ...prev, status: "connected" }));
+        // Don't set to connected yet, wait for ICE to establish
+        setCallData((prev) => ({ ...prev, status: "connecting" }));
+        console.log("🔄 Answer sent, waiting for connection to establish...");
       } catch (error) {
         console.error("❌ Error handling offer:", error);
         setCallData((prev) => ({
@@ -607,7 +616,8 @@ export function useVideoCall(options: UseVideoCallOptions) {
             new RTCSessionDescription(data.sdp)
           );
           console.log("✅ Remote description (answer) set");
-          setCallData((prev) => ({ ...prev, status: "connected" }));
+          // Don't set to connected here, let the connection state handler do it
+          console.log("🔄 Answer processed, waiting for connection to establish...");
         } else {
           console.warn("⚠️ No peer connection to set answer");
         }
