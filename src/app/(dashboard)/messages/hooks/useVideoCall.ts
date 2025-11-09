@@ -307,12 +307,20 @@ export function useVideoCall(options: UseVideoCallOptions) {
 
         // Notify remote user via socket
         console.log("📤 Sending call notification to:", remoteUserId);
+        console.log("📤 Call details:", {
+          to: remoteUserId,
+          callId: call.id,
+          room_name: call.room_name,
+          socketId: socket.id,
+          socketConnected: socket.connected,
+        });
+
         socket.emit("webrtc:call", {
           to: remoteUserId,
           callId: call.id,
           room_name: call.room_name,
         });
-        console.log("✅ Call notification sent");
+        console.log("✅ Call notification sent via socket");
       } catch (error) {
         console.error("❌ Error initiating call:", error);
         setCallData((prev) => ({
@@ -414,6 +422,32 @@ export function useVideoCall(options: UseVideoCallOptions) {
     }
   }, [callData, socket]);
 
+  // Reset call state to idle (for closing modal)
+  const resetCallState = useCallback(() => {
+    console.log("🔄 Resetting call state to idle");
+
+    // Close peer connection if still open
+    if (peerConnectionRef.current) {
+      peerConnectionRef.current.close();
+      peerConnectionRef.current = null;
+    }
+
+    // Stop local stream if still active
+    if (localStreamRef.current) {
+      localStreamRef.current.getTracks().forEach((track) => track.stop());
+      localStreamRef.current = null;
+    }
+
+    setLocalStream(null);
+    setRemoteStream(null);
+    setCallData({
+      callId: null,
+      remoteUserId: null,
+      status: "idle",
+      error: null,
+    });
+  }, []);
+
   // Toggle mute
   const toggleMute = useCallback(() => {
     if (localStreamRef.current) {
@@ -447,6 +481,9 @@ export function useVideoCall(options: UseVideoCallOptions) {
       room_name?: string;
     }) => {
       console.log("📞 Incoming call event received:", data);
+      console.log("📞 Current socket userId:", socketRef.current?.id);
+      console.log("📞 Socket connected:", socketRef.current?.connected);
+
       // Set call status to ringing so the modal shows
       setCallData({
         callId: data.callId,
@@ -454,8 +491,11 @@ export function useVideoCall(options: UseVideoCallOptions) {
         status: "ringing",
         error: null,
       });
+      console.log("📞 Call data updated to ringing status");
+
       // Trigger the callback
       callbacksRef.current.onIncomingCall?.(data);
+      console.log("📞 onIncomingCall callback triggered");
     };
 
     // Handle call accepted (caller receives this from callee)
@@ -653,6 +693,7 @@ export function useVideoCall(options: UseVideoCallOptions) {
     initiateCall,
     acceptCall,
     endCall,
+    resetCallState,
     toggleMute,
     toggleVideo,
   };
