@@ -3,7 +3,7 @@ import Link from "next/link"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
-import { Calendar, DollarSign, Upload } from "lucide-react"
+import { Calendar, DollarSign, Upload, Star } from "lucide-react"
 
 interface Job {
     id: string
@@ -176,13 +176,22 @@ export function JobCard({ application }: JobCardProps) {
                     </div>
 
                     <div className="flex flex-col gap-2 min-w-[160px]">
-                        <Button
-                            onClick={() => router.push(`/find-jobs/${job.id}`)}
-                            className="w-full bg-primary hover:bg-primary/90"
-                        >
-                            <Upload className="w-4 h-4 mr-2" />
-                            View & Upload
-                        </Button>
+                        {application.status === 'completed' ? (
+                            <Link href={`/my-jobs/${job.id}`} className="w-full">
+                                <Button className="w-full bg-yellow-500 hover:bg-yellow-600">
+                                    <Star className="w-4 h-4 mr-2" />
+                                    Rate Experience
+                                </Button>
+                            </Link>
+                        ) : (
+                            <Button
+                                onClick={() => router.push(`/find-jobs/${job.id}`)}
+                                className="w-full bg-primary hover:bg-primary/90"
+                            >
+                                <Upload className="w-4 h-4 mr-2" />
+                                View & Upload
+                            </Button>
+                        )}
                         <div className="text-xs text-center text-muted-foreground mt-2">
                             Applied: {new Date(application.createdAt).toLocaleDateString("en-US")}
                         </div>

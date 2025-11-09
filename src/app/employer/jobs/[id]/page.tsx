@@ -11,6 +11,7 @@ import { useParams } from "next/navigation"
 import { Check } from "lucide-react"
 import { EmployerProductsSection } from "./components/EmployerProductsSection"
 import { CompleteJobModal } from "./components/CompleteJobModal"
+import { RatingModal } from "@/components/RatingModal"
 
 // Type cho Job Detail
 interface JobDetail {
@@ -60,6 +61,8 @@ export default function EmployerJobDetailPage() {
     const [error, setError] = useState<string | null>(null)
     const [completingJob, setCompletingJob] = useState(false)
     const [completeModalOpen, setCompleteModalOpen] = useState(false)
+    const [ratingModalOpen, setRatingModalOpen] = useState(false)
+    const [submittingRating, setSubmittingRating] = useState(false)
     const [acceptedApplication, setAcceptedApplication] = useState<Application | null>(null)
     const [loadingApplications, setLoadingApplications] = useState(false)
 
@@ -177,13 +180,17 @@ export default function EmployerJobDetailPage() {
             // Use the accepted application ID (required by backend)
             await api.applications.complete(acceptedApplication.id);
 
+            // Close complete modal
+            setCompleteModalOpen(false);
+
+            // Show success message
             alert('Job has been completed successfully! Payment has been transferred to the freelancer (minus 8% platform fee).');
 
             // Update local state
             setJob(prev => prev ? { ...prev, status: 'completed' } : null);
 
-            // Close modal
-            setCompleteModalOpen(false);
+            // Show rating modal after job completion
+            setRatingModalOpen(true);
 
         } catch (error) {
             console.error('Error completing job:', error);
@@ -191,6 +198,25 @@ export default function EmployerJobDetailPage() {
             alert(`Failed to complete job: ${errorMessage}`);
         } finally {
             setCompletingJob(false);
+        }
+    }
+
+    // Handle Rating Submit
+    const handleRatingSubmit = async (rating: number, comment: string) => {
+        try {
+            setSubmittingRating(true)
+            await api.jobReviews.create({
+                job_id: jobId,
+                rating,
+                comment: comment || undefined,
+            })
+            alert("Thank you for your feedback!")
+            setRatingModalOpen(false)
+        } catch (error) {
+            console.error("Error submitting rating:", error)
+            alert("Failed to submit rating. Please try again.")
+        } finally {
+            setSubmittingRating(false)
         }
     }
 
@@ -550,6 +576,16 @@ export default function EmployerJobDetailPage() {
                 acceptedApplication={acceptedApplication}
                 onConfirm={handleCompleteJob}
                 isLoading={completingJob}
+            />
+
+            {/* Rating Modal */}
+            <RatingModal
+                isOpen={ratingModalOpen}
+                onClose={() => setRatingModalOpen(false)}
+                onSubmit={handleRatingSubmit}
+                title="Rate Your Experience"
+                description="How was your experience with this freelancer? Your feedback helps improve our platform."
+                isLoading={submittingRating}
             />
         </div>
     )
