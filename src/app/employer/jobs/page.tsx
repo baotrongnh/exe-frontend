@@ -110,6 +110,11 @@ export default function MyJobsPage() {
   };
 
   const formatBudget = (min: number, max: number, currency: string) => {
+    // Handle case where budget_min/max are not provided (NaN)
+    if (isNaN(min) || isNaN(max)) {
+      return "Budget not specified";
+    }
+
     const symbol = currency === "VND" ? "₫" : "$";
     if (currency === "VND") {
       return `${(min / 1000000).toFixed(0)}M - ${(max / 1000000).toFixed(0)}M ${symbol}`;
