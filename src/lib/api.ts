@@ -2,8 +2,8 @@ import axios, { AxiosError } from "axios";
 import { supabase } from "./supabase";
 
 // Base URL cho API backend
-export const API_BASE_URL = "https://513q6dp9-5000.asse.devtunnels.ms/"; // Backend API base URL
-
+// export const API_BASE_URL = "https://513q6dp9-5000.asse.devtunnels.ms/"; // Backend API base URL
+export const API_BASE_URL = "https://exe201.klong.io.vn/";
 // Tạo axios instance cho tất cả API calls
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
