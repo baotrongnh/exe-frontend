@@ -27,16 +27,13 @@ export default function PostJobPage() {
     return new Intl.NumberFormat("vi-VN").format(Number(value));
   };
 
-  const parseNumber = (formattedValue: string) => {
-    return formattedValue.replace(/\./g, "");
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
 
     if (name === "post_cost") {
-      const rawValue = parseNumber(value);
-      if (!isNaN(Number(rawValue))) {
+      // Remove all non-digit characters (dots, commas, spaces, etc.)
+      const rawValue = value.replace(/\D/g, "");
+      if (rawValue === "" || !isNaN(Number(rawValue))) {
         setFormData({
           ...formData,
           [name]: rawValue,
